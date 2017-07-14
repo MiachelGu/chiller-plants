@@ -3,6 +3,7 @@
 *.sqlite3
 *.db
 .ipynb_checkpoints
+.mongodb
 data
 docs
 old_work
