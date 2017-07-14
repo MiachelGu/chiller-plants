@@ -16,8 +16,13 @@ Including another URLconf
 from django.conf.urls import url, include
 from django.contrib import admin
 from dashing.utils import router
+from dashboard import widgets
+
+
+router.register(widgets.MyWidget, 'my_widget')
+
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'', include(router.urls)),
+    url(r'', include(router.urls), name='dashboard'),
 ]
