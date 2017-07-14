@@ -1,4 +1,17 @@
-"""Load existing logs into MongoDB."""
+"""Load existing logs into MongoDB.
+
+How to use the script:
+
+python load_to_mongo.py
+    --db=dashboard [database name]
+    --host=localhost [database host name]
+    --port=27017 [database port name]
+    --site=np --[dataset chiller plant site. eg. North Point, np]
+    --data=/c/path-to-csv.csv
+
+To implement:
+    Add optional arguments to pass username and password of database
+"""
 
 from mongoengine import connect
 
@@ -41,14 +54,9 @@ def main():
     def save_to_db(row):
         bulk = save_to_db.bulk
         data = row.to_dict()
-        timestamp = data.pop("timestamp")
-        for param, value in data.iteritems():
-            log = models.Log(timestamp=timestamp, site=site, param=param, param_value=value)
-            save_to_db.bulk.append(log)
-            if len(bulk) > 10 ** 3:
-                models.Log.objects.insert(bulk)
-                save_to_db.bulk = []
-        if len(bulk) > 0:
+        log = models.Log(**data)
+        save_to_db.bulk.append(log)
+        if len(bulk) > 30 ** 3:
             models.Log.objects.insert(bulk)
             save_to_db.bulk = []
 
@@ -58,6 +66,11 @@ def main():
     # Iterate
     print("Saving data.. ")
     df.apply(save_to_db, axis=1)
+
+    # Finally,
+    if len(save_to_db.bulk) > 0:
+        models.Log.objects.insert(save_to_db.bulk)
+        save_to_db.bulk = []
     
     print("Done!")
 
