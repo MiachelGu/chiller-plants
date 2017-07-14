@@ -1,0 +1,191 @@
+Epoch 1/1
+479s - loss: 0.0031
+Epoch 1/1
+508s - loss: 0.0010
+Epoch 1/1
+507s - loss: 9.1360e-04
+Epoch 1/1
+507s - loss: 9.0125e-04
+Epoch 1/1
+509s - loss: 8.9520e-04
+Epoch 1/1
+509s - loss: 8.8368e-04
+Epoch 1/1
+507s - loss: 8.7542e-04
+Epoch 1/1
+508s - loss: 8.6540e-04
+Epoch 1/1
+510s - loss: 8.9613e-04
+Epoch 1/1
+508s - loss: 8.8676e-04
+Epoch 1/1
+510s - loss: 8.8065e-04
+Epoch 1/1
+508s - loss: 8.7865e-04
+Epoch 1/1
+508s - loss: 8.8531e-04
+Epoch 1/1
+506s - loss: 8.6686e-04
+Epoch 1/1
+502s - loss: 8.5831e-04
+Epoch 1/1
+508s - loss: 8.5154e-04
+Epoch 1/1
+509s - loss: 8.4754e-04
+Epoch 1/1
+508s - loss: 8.3685e-04
+Epoch 1/1
+509s - loss: 8.4004e-04
+Epoch 1/1
+507s - loss: 8.3742e-04
+Epoch 1/1
+510s - loss: 8.5880e-04
+Epoch 1/1
+506s - loss: 8.5854e-04
+Epoch 1/1
+507s - loss: 8.4603e-04
+Epoch 1/1
+508s - loss: 8.4011e-04
+Epoch 1/1
+509s - loss: 8.3479e-04
+Epoch 1/1
+507s - loss: 8.3036e-04
+Epoch 1/1
+510s - loss: 8.3621e-04
+Epoch 1/1
+510s - loss: 8.3059e-04
+Epoch 1/1
+506s - loss: 8.2797e-04
+Epoch 1/1
+511s - loss: 8.2809e-04
+Epoch 1/1
+511s - loss: 8.2575e-04
+Epoch 1/1
+509s - loss: 8.2907e-04
+Epoch 1/1
+510s - loss: 8.2538e-04
+Epoch 1/1
+508s - loss: 8.2802e-04
+Epoch 1/1
+507s - loss: 8.2921e-04
+Epoch 1/1
+420s - loss: 8.3028e-04
+Epoch 1/1
+503s - loss: 8.3858e-04
+Epoch 1/1
+504s - loss: 8.4035e-04
+Epoch 1/1
+504s - loss: 8.3794e-04
+Epoch 1/1
+509s - loss: 8.3942e-04
+Epoch 1/1
+508s - loss: 8.6375e-04
+Epoch 1/1
+506s - loss: 8.4077e-04
+Epoch 1/1
+508s - loss: 8.5775e-04
+Epoch 1/1
+506s - loss: 8.4375e-04
+Epoch 1/1
+509s - loss: 8.3337e-04
+Epoch 1/1
+508s - loss: 8.2375e-04
+Epoch 1/1
+509s - loss: 8.2034e-04
+Epoch 1/1
+511s - loss: 8.2107e-04
+Epoch 1/1
+509s - loss: 8.1638e-04
+Epoch 1/1
+508s - loss: 8.1680e-04
+Epoch 1/1
+506s - loss: 8.1805e-04
+Epoch 1/1
+509s - loss: 8.1429e-04
+Epoch 1/1
+507s - loss: 8.1652e-04
+Epoch 1/1
+509s - loss: 8.0898e-04
+Epoch 1/1
+507s - loss: 8.0931e-04
+Epoch 1/1
+508s - loss: 8.1282e-04
+Epoch 1/1
+393s - loss: 8.1267e-04
+Epoch 1/1
+481s - loss: 8.2005e-04
+Epoch 1/1
+506s - loss: 8.1022e-04
+Epoch 1/1
+512s - loss: 8.1159e-04
+Epoch 1/1
+509s - loss: 8.1021e-04
+Epoch 1/1
+510s - loss: 8.0887e-04
+Epoch 1/1
+509s - loss: 8.1464e-04
+Epoch 1/1
+508s - loss: 8.1840e-04
+Epoch 1/1
+512s - loss: 8.1368e-04
+Epoch 1/1
+510s - loss: 8.2286e-04
+Epoch 1/1
+509s - loss: 8.0868e-04
+Epoch 1/1
+511s - loss: 8.2184e-04
+Epoch 1/1
+509s - loss: 8.1147e-04
+Epoch 1/1
+509s - loss: 8.1243e-04
+Epoch 1/1
+511s - loss: 8.0879e-04
+Epoch 1/1
+505s - loss: 8.2524e-04
+Epoch 1/1
+509s - loss: 8.0893e-04
+Epoch 1/1
+507s - loss: 8.0842e-04
+Epoch 1/1
+509s - loss: 8.0854e-04
+Epoch 1/1
+506s - loss: 8.1246e-04
+Epoch 1/1
+510s - loss: 8.1679e-04
+Epoch 1/1
+507s - loss: 8.1095e-04
+Epoch 1/1
+508s - loss: 8.1659e-04
+Epoch 1/1
+510s - loss: 8.1101e-04
+Epoch 1/1
+508s - loss: 8.0589e-04
+Epoch 1/1
+509s - loss: 8.0804e-04
+Epoch 1/1
+509s - loss: 8.1000e-04
+Epoch 1/1
+508s - loss: 8.0746e-04
+Epoch 1/1
+507s - loss: 8.0474e-04
+Epoch 1/1
+510s - loss: 8.0436e-04
+Epoch 1/1
+506s - loss: 8.0603e-04
+Epoch 1/1
+507s - loss: 8.0116e-04
+Epoch 1/1
+508s - loss: 8.0501e-04
+Epoch 1/1
+510s - loss: 8.0089e-04
+Epoch 1/1
+509s - loss: 8.0190e-04
+Epoch 1/1
+508s - loss: 8.0497e-04
+Epoch 1/1
+507s - loss: 8.0321e-04
+Epoch 1/1
+505s - loss: 7.9933e-04
+Epoch 1/1
+502s - loss: 7.9800e-04
+Epoch 1/1
