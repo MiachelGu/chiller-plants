@@ -1,8 +1,9 @@
-*.pyc
 *~
+*.pyc
+*.sqlite3
+*.db
 .ipynb_checkpoints
 data
 docs
 old_work
 papers
-
