@@ -53,7 +53,7 @@
           <h1 class="page-header">K-Realtime Dashboard</h1>
           <div class="row">
             <div class="col-xs-24 col-sm-12">
-              <div id="plot-ts-cwshdr" style="height:800px;"></div>
+              <div id="plot-ts-cwshdr"></div>
             </div>
           </div>
         </div>
@@ -66,28 +66,31 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 
     <script type="text/javascript">
-      function rand() {
-        return Math.random();
-      }
+      function onLoad(data) {
+        var x = [];
+        var y = [];
+        
+        data.forEach(function(row) {
+          x.push(row.timestamp);
+          y.push(row.cwshdr)
+        });
 
-      function trigger() {
-        // add new data
         Plotly.extendTraces("plot-ts-cwshdr", {
-          x: [ [++counter] ],
-          y: [ [rand()] ]
+          x: [x],
+          y: [y]
         }, [0]);
-
-        if (trace.y.length > historyLength) {
-          trace.y.shift();
-          trace.x.shift();
-        }
       }
 
-      var historyLength = 10;
-      var counter = 0;
+      function onError(resp) {
+        console.log(resp);
+      }
+
       var trace = {x: [], y: []};
       var data = [trace];
       var layout = {
+        height: 500,
+        width: 1000,
+        autosize: false,
         xaxis: {title: "Time"},
         yaxis: {title: "Condenser Water Supply Temperature (CWSHDR)"},
         hovermode: "closest",
@@ -95,7 +98,9 @@
       }
 
       Plotly.plot('plot-ts-cwshdr', data, layout);
-      var interval = setInterval(trigger, 1000 * 0.5);
+      $.get("/api/log/insead")
+        .done(onLoad)
+        .fail(onError);
     </script>
   </body>
 </html>

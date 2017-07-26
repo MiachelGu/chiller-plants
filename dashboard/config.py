@@ -4,7 +4,7 @@ DATABASE = {
     "db": "dashboard",
     "host": "localhost",
     "port": 27017,
-    "username": None,
+    "user": None,
     "password": None
 }
 
