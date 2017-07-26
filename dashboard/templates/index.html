@@ -38,7 +38,7 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="#">Kaer Realtime Dashboard</a>
+          <a class="navbar-brand" href="#">Kaer RealTime</a>
         </div>
       </div>
     </nav>
@@ -47,11 +47,13 @@
       <div class="row">
         <div class="col-md-2 sidebar">
           <ul class="nav nav-sidebar">
-            <li class="active"><a href="#">Custom</a></li>
+            <li class="active"><a href="#">Dynamic View</a></li>
+            <li><a href="#">Monthly View</a></li>
+            <li><a href="#">Daily View</a></li>
           </ul>
         </div>
         <div class="col-md-10 col-md-offset-2 main">
-          <h1 class="page-header">K-Realtime Dashboard</h1>
+          <h1 class="page-header">K-Realtime Dynamic View</h1>
           <div class="row">
             <div class="col-md-12">
 
@@ -90,6 +92,7 @@
                   <label class="sr-only" for="form-logs-field">Parameter</label>
                   <select class="form-control" id="form-logs-field" name="field">
                     <option value="cwshdr">Condenser Water Supply Temp (CWSHDR)</option>
+                    <option value="loadsys">System Efficiency (LoadSys)</option>
                   </select>
                 </div>
 
@@ -132,6 +135,7 @@
         event.preventDefault();
         var submitBtn = form.find("button[type=submit]");
         submitBtn.html("Loading");
+        submitBtn.prop("disabled", true);
 
         var site = form.find("select[name=site]").val();
         var queryParams = {
@@ -147,10 +151,12 @@
             var ylabel = queryParams.field.toUpperCase();
             plotNewTimeSeries(xlabel, ylabel, data, plotElementId);
             submitBtn.html("Submit");
+            submitBtn.prop("disabled", false);
           })
           .fail(function onApiFailure(err) {
             console.log(err);
             submitBtn.html("Submit");
+            submitBtn.prop("disabled", false);
           });
 
       });
