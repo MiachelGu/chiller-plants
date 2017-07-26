@@ -19,10 +19,37 @@ app = flask.Flask(__name__)
 class LogsQueryForm(wtforms.Form):
     """Form for Logs API query parameters."""
 
+    # rather naive.. but would be okay.
+    TOKEN_FMT = "%Y%m%d%H%M%S%fZ"
+    DATE_FMT = "%Y-%m-%dT%H:%M:%S.000Z"
+
     start = wtforms.DateTimeField(format="%Y-%m-%d")
     end = wtforms.DateTimeField(format="%Y-%m-%d")
-    freq = wtforms.StringField()
+    freq = wtforms.StringField(default="hours")
     fields = wtforms.StringField()
+    order = wtforms.IntegerField(default=1)
+    token = wtforms.StringField()
+    limit = wtforms.IntegerField(default=1)
+    func = wtforms.StringField(default="avg")
+
+    def validate_func(self, field):
+        allowed_funcs = ["avg", "sum", "max", "min"]
+        if field.data not in allowed_funcs:
+            message = "func {} is invalid. Allowed: {}".format(field.data, allowed_funcs)
+            raise wtforms.ValidationError(message)
+
+    def validate_token(self, field):
+        try:
+            field.data = datetime.datetime.strptime(field.data, self.TOKEN_FMT)
+        except ValueError:
+            raise wtforms.ValidationError("token {} is invalid".format(field.data))
+
+    def validate_limit(self, field):
+        field.data = min(field.data, 200)
+
+    def validate_order(self, field):
+        if field.data not in (-1, 1):
+            raise wtforms.ValidationError("order 1 or ascending, -1 for descending")
 
     def validate_freq(self, field):
         if field.data is not None and \
@@ -34,13 +61,18 @@ class LogsQueryForm(wtforms.Form):
 def logs_api(site):
     """Query for chiller plant sensor logs.
 
-    REST URL: GET /api/log/<site>
-        site := Chiller plant site
+    REST URL: GET /api/logs
+    Args:
+        site    := Chiller plant ID (eg: insead)
     Query Parameters:
-        start = String <%Y-%m-%d>, starting date
-        end = String <%Y-%m-%d>, ending date
-        freq = String (years/months/days/hours/minutes), sampling frequency
-        field = String, parameter of chiller plant
+        start   := %Y-%m-%d, Query logs > start time (UTC)
+        end     := %Y-%m-%d, Query logs <= end time (UTC)
+        freq    := years/months/days/hours/minutes, Logs sampling rate (default minutes)
+        field   := Comma separated chiller plant sensor fields
+        order   := 1 (ascending order), -1 (descending order)
+        limit   := Integer, number of logs in the response (max 200)
+        func    := Aggregate operation (avg/sum/max/min)
+        token   := Next page token
     Example URL:
         /api/log/insead?start=2017-01-01&end=2017-01-02&limit=100&freq=hours&next=
     """
@@ -60,30 +92,50 @@ def logs_api(site):
     else:
         group_by = "%Y-%m-%dT%H:%M:%S.000Z"
 
+    # start date. give token precedence.
+    start_date = form.token.data or form.start.data
+
+    # set timzones
+    start_date = start_date.replace(tzinfo=pytz.UTC)
+    form.end.data = form.end.data.replace(tzinfo=pytz.UTC)
+
     # first filter the logs by timestamp
     # Assuming timeperiod is going to be relatively smaller than data size,
     # the B+ Tree search space would highly reduced in further operations.
     # Note: Create an index on timestamp
     step_0 = {
-        "$match": {"timestamp": {"$gte": form.start.data, "$lte": form.end.data}}}
+        "$match": {
+            "timestamp": {"$gt": start_date, "$lte": form.end.data},
+            "_site": site
+        }
+    }
 
     # Now, group the documents with timestamp and `group_by` as format
     step_1 = {
         "$group": {"_id": {"$dateToString": {"format": group_by, "date": "$timestamp"}}}}
 
     # find avg of all the `fields` mentioned in query params
+    func = "${}".format(form.func.data)
     for f in form.fields.data.split(","):
         key = "${}".format(f)
-        step_1["$group"][f] = {"$avg": key}
+        step_1["$group"][f] = {func: key}
 
     # sort the data..
-    step_2 = {"$sort": {"_id": 1}}
+    step_2 = {"$sort": {"_id": form.order.data}}
+
+    # limit the results (don't want irritate http)
+    step_3 = {"$limit": form.limit.data}
 
     # query data
     # TODO: Pagination. This could be a pain in the ass.
     db = app.config["db"]
-    data = [i for i in db.log.aggregate([step_0, step_1, step_2])]
+    results = [i for i in db.log.aggregate([step_0, step_1, step_2, step_3])]
 
+    # conversion: string -> date -> string
+    token_id = datetime.datetime.strptime(results[-1]["_id"], form.DATE_FMT)
+    token_id = token_id.strftime(form.TOKEN_FMT)
+
+    data = {"token": token_id, "results": results}
     return json.jsonify(data)
 
 
