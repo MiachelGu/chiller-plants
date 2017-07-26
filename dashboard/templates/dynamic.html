@@ -39,7 +39,7 @@
 
       <div class="form-group">
         <label class="sr-only" for="form-logs-field">Parameter</label>
-        <select class="form-control" id="form-logs-field" name="field">
+        <select class="form-control" id="form-logs-field" name="fields">
           <option value="cwshdr">Condenser Water Supply Temp (CWSHDR)</option>
           <option value="loadsys">System Efficiency (LoadSys)</option>
         </select>
@@ -84,14 +84,14 @@
       start: form.find("input[name=start]").val(),
       end: form.find("input[name=end]").val(),
       freq: form.find("select[name=freq]").val(),
-      field: form.find("select[name=field]").val()
+      fields: form.find("select[name=fields]").val()
     };
 
-    $.get("/api/log/" + site, queryParams)
+    $.get("/api/v1/logs/" + site, queryParams)
       .done(function onApiSuccess(data) {
         var xlabel = "Time";
-        var ylabel = queryParams.field.toUpperCase();
-        plotNewTimeSeries(xlabel, ylabel, data, plotElementId);
+        var ylabel = queryParams.fields.toUpperCase();
+        plotNewTimeSeries(xlabel, ylabel, data.results, queryParams.fields, plotElementId);
         submitBtn.html("Refresh");
         submitBtn.prop("disabled", false);
       })
@@ -104,7 +104,7 @@
   });
 
   // create a new time series plot
-  function plotNewTimeSeries(xlabel, ylabel, data, plotElementId) {
+  function plotNewTimeSeries(xlabel, ylabel, data, field, plotElementId) {
     var layout = {
       xaxis: {title: xlabel, showgrid: false},
       yaxis: {title: ylabel, showgrid: false},
@@ -117,7 +117,7 @@
       mode: "lines+markers",
       line: {width: 1},
       x: data.map(function(i) { return new Date(i._id); }),
-      y: data.map(function(i) { return i.value; }),
+      y: data.map(function(i) { return i[field]; }),
     };
 
     Plotly.newPlot(plotElementId, [trace], layout);

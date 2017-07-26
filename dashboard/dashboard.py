@@ -4,6 +4,7 @@ from flask import json
 from flask import request
 from flask import render_template
 from flask import make_response
+from wtforms import validators
 
 import flask
 import wtforms
@@ -23,37 +24,45 @@ class LogsQueryForm(wtforms.Form):
     TOKEN_FMT = "%Y%m%d%H%M%S%fZ"
     DATE_FMT = "%Y-%m-%dT%H:%M:%S.000Z"
 
-    start = wtforms.DateTimeField(format="%Y-%m-%d")
-    end = wtforms.DateTimeField(format="%Y-%m-%d")
-    freq = wtforms.StringField(default="hours")
-    fields = wtforms.StringField()
-    order = wtforms.IntegerField(default=1)
+    start = wtforms.DateTimeField(format="%Y-%m-%d", validators=[validators.required()])
+    end = wtforms.DateTimeField(format="%Y-%m-%d", validators=[validators.required()])
+    freq = wtforms.StringField()
+    fields = wtforms.StringField(validators=[validators.required()])
+    order = wtforms.IntegerField()
     token = wtforms.StringField()
-    limit = wtforms.IntegerField(default=1)
-    func = wtforms.StringField(default="avg")
+    limit = wtforms.IntegerField()
+    func = wtforms.StringField()
 
     def validate_func(self, field):
         allowed_funcs = ["avg", "sum", "max", "min"]
+        if not field.data:
+            field.data = "avg"
         if field.data not in allowed_funcs:
             message = "func {} is invalid. Allowed: {}".format(field.data, allowed_funcs)
             raise wtforms.ValidationError(message)
 
     def validate_token(self, field):
         try:
-            field.data = dt.datetime.strptime(field.data, self.TOKEN_FMT)
+            if field.data:
+                field.data = dt.datetime.strptime(field.data, self.TOKEN_FMT)
         except ValueError:
             raise wtforms.ValidationError("token {} is invalid".format(field.data))
 
     def validate_limit(self, field):
+        if not field.data:
+            field.data = 200
         field.data = min(field.data, 200)
 
     def validate_order(self, field):
+        if not field.data:
+            field.data = 1
         if field.data not in (-1, 1):
             raise wtforms.ValidationError("order 1 or ascending, -1 for descending")
 
     def validate_freq(self, field):
-        if field.data is not None and \
-           field.data not in ["years", "months", "days", "hours", "minutes"]:
+        if not field.data:
+            field.data = "hours"
+        if field.data not in ["years", "months", "days", "hours", "minutes"]:
             raise wtforms.ValidationError("{} is invalid".format(field.data))
 
 
@@ -117,8 +126,9 @@ def logs_api(site):
     # find avg of all the `fields` mentioned in query params
     func = "${}".format(form.func.data)
     for f in form.fields.data.split(","):
-        key = "${}".format(f)
-        step_1["$group"][f] = {func: key}
+        if f:
+            key = "${}".format(f)
+            step_1["$group"][f] = {func: key}
 
     # sort the data..
     step_2 = {"$sort": {"_id": form.order.data}}
@@ -131,22 +141,25 @@ def logs_api(site):
     db = app.config["db"]
     results = [i for i in db.log.aggregate([step_0, step_1, step_2, step_3])]
 
-    # conversion: string -> date -> string
-    token_id = dt.datetime.strptime(results[-1]["_id"], form.DATE_FMT)
-    token_id = token_id.strftime(form.TOKEN_FMT)
-
     # send the query parameters as reference
     params = form.data
     params["start"] = params["start"].strftime(form.DATE_FMT)
     params["end"] = params["end"].strftime(form.DATE_FMT)
-    params["token"] = params["token"].strftime(form.TOKEN_FMT)
+
+    if params["token"]:
+        params["token"] = params["token"].strftime(form.TOKEN_FMT)
 
     data = {
-        "nextPageToken": token_id,
         "results": results,
         "queryParams": params,
         "apiVersion": "v1"
     }
+
+    # conversion: string -> date -> string
+    if len(results) > 0:
+        token_id = dt.datetime.strptime(results[-1]["_id"], form.DATE_FMT)
+        data["nextPageToken"] = token_id.strftime(form.TOKEN_FMT)
+
     return json.jsonify(data)
 
 
