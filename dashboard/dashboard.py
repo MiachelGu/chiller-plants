@@ -1,22 +1,36 @@
 """K-Realtime backend server. Flask App."""
 
-from flask import Flask
 from flask import json
 from flask import request
 from flask import render_template
 from flask import make_response
 
 import flask
+import wtforms
 import config as cfg
 import pymongo
 import datetime
 import pytz
 
 
-app = Flask(__name__)
+app = flask.Flask(__name__)
 
 
-@app.route("/api/log/<site>", methods=["GET"])
+class LogsQueryForm(wtforms.Form):
+    """Form for Logs API query parameters."""
+
+    start = wtforms.DateTimeField(format="%Y-%m-%d")
+    end = wtforms.DateTimeField(format="%Y-%m-%d")
+    freq = wtforms.StringField()
+    fields = wtforms.StringField()
+
+    def validate_freq(self, field):
+        if field.data is not None and \
+           field.data not in ["years", "months", "days", "hours", "minutes"]:
+            raise wtforms.ValidationError("{} is invalid".format(field.data))
+
+
+@app.route("/api/logs/<site>", methods=["GET"])
 def logs_api(site):
     """Query for chiller plant sensor logs.
 
@@ -30,35 +44,46 @@ def logs_api(site):
     Example URL:
         /api/log/insead?start=2017-01-01&end=2017-01-02&limit=100&freq=hours&next=
     """
-    start_date = datetime.datetime.strptime(request.args["start"], "%Y-%m-%d").replace(tzinfo=pytz.UTC)
-    end_date = datetime.datetime.strptime(request.args["end"], "%Y-%m-%d").replace(tzinfo=pytz.UTC)
-    field = request.args["field"]
-    freq = request.args["freq"]
+    form = LogsQueryForm(request.args)
+    if not form.validate():
+        data = {"http_code": 400, "errors": form.errors}
+        return make_response(json.jsonify(**data), 400)
 
-    if freq == "years":
+    if form.freq.data == "years":
         group_by = "%Y-01-01T00:00:00.000Z"
-    elif freq == "months":
+    elif form.freq.data == "months":
         group_by = "%Y-%m-01T00:00:00.000Z"
-    elif freq == "days":
+    elif form.freq.data == "days":
         group_by = "%Y-%m-%dT00:00:00.000Z"
-    elif freq == "hours":
+    elif form.freq.data == "hours":
         group_by = "%Y-%m-%dT%H:00:00.000Z"
     else:
         group_by = "%Y-%m-%dT%H:%M:%S.000Z"
 
-    pipeline = [
-        {"$match": {"timestamp": {"$gte": start_date, "$lte": end_date}}},
-        {
-            "$group": {
-                "_id": {"$dateToString": {"format": group_by, "date": "$timestamp"}},
-                "value": {"$avg": "${}".format(field)}
-            }
-        },
-        {"$sort": {"_id": 1}}
-    ]
+    # first filter the logs by timestamp
+    # Assuming timeperiod is going to be relatively smaller than data size,
+    # the B+ Tree search space would highly reduced in further operations.
+    # Note: Create an index on timestamp
+    step_0 = {
+        "$match": {"timestamp": {"$gte": form.start.data, "$lte": form.end.data}}}
 
+    # Now, group the documents with timestamp and `group_by` as format
+    step_1 = {
+        "$group": {"_id": {"$dateToString": {"format": group_by, "date": "$timestamp"}}}}
+
+    # find avg of all the `fields` mentioned in query params
+    for f in form.fields.data.split(","):
+        key = "${}".format(f)
+        step_1["$group"][f] = {"$avg": key}
+
+    # sort the data..
+    step_2 = {"$sort": {"_id": 1}}
+
+    # query data
+    # TODO: Pagination. This could be a pain in the ass.
     db = app.config["db"]
-    data = [i for i in db.log.aggregate(pipeline)]
+    data = [i for i in db.log.aggregate([step_0, step_1, step_2])]
+
     return json.jsonify(data)
 
 
