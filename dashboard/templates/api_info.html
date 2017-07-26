@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}K-Realtime API Documentation{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <h2>Logs</h2>
+    <pre>GET /api/v1/logs/&ltsite-id&gt</pre>
+    <table class="table table-striped table-condensed">
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>API Version</td>
+            <td>v1</td>
+        </tr>
+        <tr>
+            <td>API to interact with timeseries data of chiller plants</td>
+            <td></td>
+        </tr>
+    </table>
+    <table class="table table-striped table-condensed">
+        <tr>
+            <th>Query Parameter</th>
+            <th>Optional</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+          <td>site-id</td>
+          <td>Yes</td>
+          <td>Chiller plant site ID</td>
+        </tr>
+        <tr>
+          <td>start</td>
+          <td>Yes</td>
+          <td>UTC Date in format %Y-%m-%d. Data logged after this date will be returned</td>
+        </tr>
+        <tr>
+          <td>end</td>
+          <td>Yes</td>
+          <td>UTC Date in format %Y-%m-%d. Data logged on or before this date will be returned</td>
+        </tr>
+        <tr>
+          <td>freq</td>
+          <td>No</td>
+          <td>Sampling rate of the data. Accepted values: years, months, days, hours, minutes</td>
+        </tr>
+        <tr>
+          <td>fields</td>
+          <td>Yes</td>
+          <td>Comma separated list of chiller plant data fields to return (lowercase)</td>
+        </tr>
+        <tr>
+          <td>order</td>
+          <td>No</td>
+          <td>Order of the returned data. 1 (ascending), -1(descending). The order of comma separated field will be implicitly used as precendence.</td>
+        </tr>
+        <tr>
+          <td>func</td>
+          <td>No</td>
+          <td>Aggregation function applied on the data. Accepted values: avg (default), max, min, sum</td>
+        </tr>
+        <tr>
+          <td>limit</td>
+          <td>No</td>
+          <td>Maximum number of results to return. At most 200.</td>
+        </tr>
+        <tr>
+          <td>token</td>
+          <td>No</td>
+          <td>Next page token. Token to query data in the next page</td>
+        </tr>
+    </table>
+    <code>
+      <pre><b>Response Format</b></pre>
+      <pre>
+          {
+            "apiVersion": "v1",
+            "queryParams": {
+              # query parameters sent as request
+            },
+            "nextPageToken": # value, 
+            "results": [
+              {
+                "_id": # UTC timestamp,
+                "field": # value,
+              }
+            ]
+          }
+        </pre>
+    </code>
+  </div>
+</div>
+{% endblock %}

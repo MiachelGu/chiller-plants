@@ -57,7 +57,7 @@ class LogsQueryForm(wtforms.Form):
             raise wtforms.ValidationError("{} is invalid".format(field.data))
 
 
-@app.route("/api/logs/<site>", methods=["GET"])
+@app.route("/api/v1/logs/<site>", methods=["GET"])
 def logs_api(site):
     """Query for chiller plant sensor logs.
 
@@ -68,7 +68,7 @@ def logs_api(site):
         start   := %Y-%m-%d, Query logs > start time (UTC)
         end     := %Y-%m-%d, Query logs <= end time (UTC)
         freq    := years/months/days/hours/minutes, Logs sampling rate (default minutes)
-        field   := Comma separated chiller plant sensor fields
+        fields  := Comma separated chiller plant sensor fields
         order   := 1 (ascending order), -1 (descending order)
         limit   := Integer, number of logs in the response (max 200)
         func    := Aggregate operation (avg/sum/max/min)
@@ -141,8 +141,18 @@ def logs_api(site):
     params["end"] = params["end"].strftime(form.DATE_FMT)
     params["token"] = params["token"].strftime(form.TOKEN_FMT)
 
-    data = {"token": token_id, "results": results, "params": params}
+    data = {
+        "nextPageToken": token_id,
+        "results": results,
+        "queryParams": params,
+        "apiVersion": "v1"
+    }
     return json.jsonify(data)
+
+
+@app.route("/api/info")
+def api_info_page():
+    return render_template("api_info.html")
 
 
 @app.route("/")

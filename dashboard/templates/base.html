@@ -45,6 +45,7 @@
               <li class="{% if request.path == '/' or request.path == '/view/dynamic' %}active{% endif %}"><a href="/view/dynamic">Dynamic View</a></li>
               <li class="{% if request.path == '/view/monthly' %}active{% endif %}"><a href="/view/monthly">Monthly View</a></li>
               <li class="{% if request.path == '/view/daily' %}active{% endif %}"><a href="/view/daily">Daily View</a></li>
+              <li class="{% if request.path == '/api/info' %}active{% endif %}"><a href="/api/info">API Documentation</a></li>
             </ul>
           {% endblock %}
         </div>
