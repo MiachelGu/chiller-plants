@@ -37,9 +37,9 @@ def main():
     df = df.rename(columns={"Time Stamp": "timestamp"})
 
     # update data types
-    dtypes = dict([(col, np.float64) for col in df.columns])
-    dtypes["timestamp"] = "datetime64[ns]"
+    dtypes = dict([(col, np.float64) for col in df.columns if col != "timestamp"])
     df = df.astype(dtypes)
+    df.timestamp = pd.to_datetime(df.timestamp)
     df.timestamp = df.timestamp.apply(lambda t: t.tz_localize(pytz.UTC))
 
     # connect to database
