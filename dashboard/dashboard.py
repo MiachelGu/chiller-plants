@@ -47,18 +47,14 @@ def logs_api(site):
         group_by = "%Y-%m-%dT%H:%M:%S.000Z"
 
     pipeline = [
-        {
-            "$match": {"timestamp": {"$gte": start_date, "$lte": end_date}}
-        },
+        {"$match": {"timestamp": {"$gte": start_date, "$lte": end_date}}},
         {
             "$group": {
-                "_id": {"$dateToString": { "format": group_by, "date": "$timestamp"}},
+                "_id": {"$dateToString": {"format": group_by, "date": "$timestamp"}},
                 "value": {"$avg": "${}".format(field)}
             }
         },
-        {
-            "$sort": {"_id": 1}
-        }
+        {"$sort": {"_id": 1}}
     ]
 
     db = app.config["db"]
