@@ -13,16 +13,15 @@ To implement:
     Add optional arguments to pass username and password of database
 """
 
-from mongoengine import connect
-
+import pymongo
 import argparse
-import models
 import pandas as pd
 import numpy as np
+import pytz
 
 
 parser = argparse.ArgumentParser(description="Load sensor logs into MongoDB from CSV files")
-parser.add_argument("--site", type=str, help="Chiller plant site")
+parser.add_argument("--site", type=str, help="Chiller Plant site ID")
 parser.add_argument("--db", type=str, help="MongoDB database name")
 parser.add_argument("--host", type=str, help="MongoDB Host")
 parser.add_argument("--port", type=int, help="MongoDB Port")
@@ -31,10 +30,9 @@ args = parser.parse_args()
 
 
 def main():
-    print("Loading data now.. ")
-
     # load data as dataframe
-    df = pd.read_csv(args.data)
+    print("Loading data now.. ")
+    df = pd.read_csv(args.data, low_memory=False)
     df = df.replace("\\N", np.nan)
     df = df.rename(columns={"Time Stamp": "timestamp"})
 
@@ -42,26 +40,27 @@ def main():
     dtypes = dict([(col, np.float64) for col in df.columns])
     dtypes["timestamp"] = "datetime64[ns]"
     df = df.astype(dtypes)
-    
-    print("Connecting to database.. ")
+    df.timestamp = df.timestamp.apply(lambda t: t.tz_localize(pytz.UTC))
 
     # connect to database
-    connect(db=args.db, host=args.host, port=args.port)
+    print("Connecting to database.. ")
+    client = pymongo.MongoClient(host=args.host, port=args.port, tz_aware=True)
+    db = client[args.db]
 
     # get chiller plant site
-    site = models.Site.objects(name=args.site).get()
+    if db.site.find_one({"_id": args.site}) is None:
+        raise Exception("Chiller Plant site ID is not found in the database!")
 
     def save_to_db(row):
-        save_to_db.count = getattr(save_to_db, "count", 0) + 1
         save_to_db.bulk = getattr(save_to_db, "bulk", [])
-        log = models.Log(**row.to_dict())
-        save_to_db.bulk.append(log)
-        if len(bulk) > 30 ** 3 or save_to_db.count == len(df)-1:
-            models.Log.objects.insert(bulk)
+        row["_site"] = args.site
+        save_to_db.bulk.append(row.to_dict())
+        if len(save_to_db.bulk) > 30 ** 3 or row.name == len(df)-1:
+            print("Saving at {0}...".format(row.name))
+            db.log.insert_many(save_to_db.bulk)
             save_to_db.bulk = []
 
     # Iterate
-    print("Saving data.. ")
     df.apply(save_to_db, axis=1)
     print("Done!")
 
