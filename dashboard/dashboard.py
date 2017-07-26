@@ -4,6 +4,7 @@ from flask import Flask
 from flask import json
 from flask import request
 from flask import render_template
+from flask import make_response
 
 import config as cfg
 import pymongo
@@ -21,33 +22,48 @@ def logs_api(site):
     REST URL: GET /api/log/<site>
         site := Chiller plant site
     Query Parameters:
-        start = String <%Y-%m-%d>, starting date [optional]
-        end = String <%Y-%m-%d>, ending date [optional]
-        count = Integer, maximum 200, max number of logs returned [optional]
-        next = String, next page token [optional]
-        freq = String (years/months/days/hours/minutes), sampling frequency [optional]
-        fields = String, comma separated list of log fields [optional]
+        start = String <%Y-%m-%d>, starting date
+        end = String <%Y-%m-%d>, ending date
+        freq = String (years/months/days/hours/minutes), sampling frequency
+        field = String, parameter of chiller plant
     Example URL:
-        /api/log/insead?start=2017-01-01&end=2017-01-02&count=100&freq=hours&next=
+        /api/log/insead?start=2017-01-01&end=2017-01-02&limit=100&freq=hours&next=
     """
-    end_date = datetime.datetime(2017, 1, 2, tzinfo=pytz.UTC)
-    start_date = end_date - datetime.timedelta(minutes=30)
+    start_date = datetime.datetime.strptime(request.args["start"], "%Y-%m-%d").replace(tzinfo=pytz.UTC)
+    end_date = datetime.datetime.strptime(request.args["end"], "%Y-%m-%d").replace(tzinfo=pytz.UTC)
+    field = request.args["field"]
+    freq = request.args["freq"]
 
-    query = {
-        "timestamp": {
-            "$gt":  start_date, "$lte": end_date
+    if freq == "years":
+        group_by = "%Y-01-01T00:00:00.000Z"
+    elif freq == "months":
+        group_by = "%Y-%m-01T00:00:00.000Z"
+    elif freq == "days":
+        group_by = "%Y-%m-%dT00:00:00.000Z"
+    elif freq == "hours":
+        group_by = "%Y-%m-%dT%H:00:00.000Z"
+    else:
+        group_by = "%Y-%m-%dT%H:%M:%S.000Z"
+
+    pipeline = [
+        {
+            "$match": {"timestamp": {"$gte": start_date, "$lte": end_date}}
+        },
+        {
+            "$group": {
+                "_id": {"$dateToString": { "format": group_by, "date": "$timestamp"}},
+                "value": {"$avg": "${}".format(field)}
+            }
+        },
+        {
+            "$sort": {"_id": 1}
         }
-    }
+    ]
 
     db = app.config["db"]
-    data = []
-    for row in db.log.find(query):
-        row.pop("_id")
-        data.append(row)
-
+    data = [i for i in db.log.aggregate(pipeline)]
     return json.jsonify(data)
-    
-        
+
 
 @app.route("/")
 def index_page():

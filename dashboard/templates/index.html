@@ -10,7 +10,7 @@
     <meta name="author" content="">
     <link rel="icon" href="/static/favicon.ico">
 
-    <title>K-Realtime Dashboard</title>
+    <title>Kaer Realtime Dashboard</title>
 
     <!-- Bootstrap core CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
@@ -18,6 +18,7 @@
 
     <!-- Custom styles for this template -->
     <link href="/static/dashboard.css" rel="stylesheet">
+    <link href="/static/bootstrap-datepicker.min.css" rel="stylesheet">
 
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
@@ -37,23 +38,67 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="#">K-Realtime Dashboard</a>
+          <a class="navbar-brand" href="#">Kaer Realtime Dashboard</a>
         </div>
       </div>
     </nav>
 
     <div class="container-fluid">
       <div class="row">
-        <div class="col-sm-3 col-md-2 sidebar">
+        <div class="col-md-2 sidebar">
           <ul class="nav nav-sidebar">
-            <li class="active"><a href="#">Overview <span class="sr-only">(current)</span></a></li>
+            <li class="active"><a href="#">Custom</a></li>
           </ul>
         </div>
-        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+        <div class="col-md-10 col-md-offset-2 main">
           <h1 class="page-header">K-Realtime Dashboard</h1>
           <div class="row">
-            <div class="col-xs-24 col-sm-12">
-              <div id="plot-ts-cwshdr"></div>
+            <div class="col-md-12">
+
+              <!-- user form -->
+              <form class="form-inline" id="form-logs">
+                <div class="form-group">
+                  <label class="sr-only" for="form-logs-site">Site</label>
+                  <select class="form-control" id="form-logs-site" name="site">
+                    <option value="np">North Point</option>
+                    <option selected value="insead">Insead</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="sr-only" for="form-logs-start">Start Date</label>
+                  <input type="text" class="form-control datepicker" id="form-logs-start" name="start" placeholder="Start 2017-12-30">
+                </div>
+
+                <div class="form-group">
+                  <label class="sr-only" for="form-logs-end">End Date</label>
+                  <input type="text" class="form-control datepicker" id="form-logs-end" name="end" placeholder="End 2017-12-31">
+                </div>
+
+                <div class="form-group">
+                  <label class="sr-only" for="form-logs-freq">Frequency</label>
+                  <select class="form-control" id="form-logs-freq" name="freq">
+                    <option value="years">Years</option>
+                    <option value="days">Days</option>
+                    <option value="months">Months</option>
+                    <option selected value="hours">Hours</option>
+                    <option value="minutes">Minutes</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="sr-only" for="form-logs-field">Parameter</label>
+                  <select class="form-control" id="form-logs-field" name="field">
+                    <option value="cwshdr">Condenser Water Supply Temp (CWSHDR)</option>
+                  </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="form-logs-submit">Refresh</button>
+              </form>
+
+              <!-- plot -->
+              <div id="plot-logs" style="min-height: 600px;"></div>
+
             </div>
           </div>
         </div>
@@ -62,45 +107,76 @@
 
     <!-- Placed at the end of the document so the pages load faster -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="/static/bootstrap-datepicker.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-1.2.0.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 
     <script type="text/javascript">
-      function onLoad(data) {
-        var x = [];
-        var y = [];
-        
-        data.forEach(function(row) {
-          x.push(row.timestamp);
-          y.push(row.cwshdr)
-        });
+      $(".datepicker").datepicker({
+          format: "yyyy-mm-dd",
+          autoclose: true,
+          todayHighlight: true,
+      });
 
-        Plotly.extendTraces("plot-ts-cwshdr", {
-          x: [x],
-          y: [y]
-        }, [0]);
+      var form = $("#form-logs"); // form
+      var plotElementId = "plot-logs";
+
+      // update form values on loading..
+      var defaultEnd = new Date();
+      var defaultStart = new Date(defaultEnd.getFullYear(), defaultEnd.getMonth(), defaultEnd.getDate()-2)
+      form.find("input[name=end]").datepicker("update", defaultEnd);
+      form.find("input[name=start]").datepicker("update", defaultStart);
+
+      // form submit event binder
+      form.submit(function(event) {
+        event.preventDefault();
+        var submitBtn = form.find("button[type=submit]");
+        submitBtn.html("Loading");
+
+        var site = form.find("select[name=site]").val();
+        var queryParams = {
+          start: form.find("input[name=start]").val(),
+          end: form.find("input[name=end]").val(),
+          freq: form.find("select[name=freq]").val(),
+          field: form.find("select[name=field]").val()
+        };
+
+        $.get("/api/log/" + site, queryParams)
+          .done(function onApiSuccess(data) {
+            var xlabel = "Time";
+            var ylabel = queryParams.field.toUpperCase();
+            plotNewTimeSeries(xlabel, ylabel, data, plotElementId);
+            submitBtn.html("Submit");
+          })
+          .fail(function onApiFailure(err) {
+            console.log(err);
+            submitBtn.html("Submit");
+          });
+
+      });
+
+      // create a new time series plot
+      function plotNewTimeSeries(xlabel, ylabel, data, plotElementId) {
+        var layout = {
+          xaxis: {title: xlabel, showgrid: false},
+          yaxis: {title: ylabel, showgrid: false},
+          hovermode: "closest",
+          showlegend: false,
+        };
+
+        var trace = {
+          type: "scatter",
+          mode: "lines+markers",
+          line: {width: 1},
+          x: data.map(function(i) { return new Date(i._id); }),
+          y: data.map(function(i) { return i.value; }),
+        };
+
+        Plotly.newPlot(plotElementId, [trace], layout);
       }
 
-      function onError(resp) {
-        console.log(resp);
-      }
-
-      var trace = {x: [], y: []};
-      var data = [trace];
-      var layout = {
-        height: 500,
-        width: 1000,
-        autosize: false,
-        xaxis: {title: "Time"},
-        yaxis: {title: "Condenser Water Supply Temperature (CWSHDR)"},
-        hovermode: "closest",
-        showlegend: false,
-      }
-
-      Plotly.plot('plot-ts-cwshdr', data, layout);
-      $.get("/api/log/insead")
-        .done(onLoad)
-        .fail(onError);
+      // submit the form by default
+      form.submit();
     </script>
   </body>
 </html>
