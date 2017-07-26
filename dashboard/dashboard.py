@@ -7,9 +7,9 @@ from flask import make_response
 
 import flask
 import wtforms
+import datetime as dt
 import config as cfg
 import pymongo
-import datetime
 import pytz
 
 
@@ -40,7 +40,7 @@ class LogsQueryForm(wtforms.Form):
 
     def validate_token(self, field):
         try:
-            field.data = datetime.datetime.strptime(field.data, self.TOKEN_FMT)
+            field.data = dt.datetime.strptime(field.data, self.TOKEN_FMT)
         except ValueError:
             raise wtforms.ValidationError("token {} is invalid".format(field.data))
 
@@ -132,10 +132,16 @@ def logs_api(site):
     results = [i for i in db.log.aggregate([step_0, step_1, step_2, step_3])]
 
     # conversion: string -> date -> string
-    token_id = datetime.datetime.strptime(results[-1]["_id"], form.DATE_FMT)
+    token_id = dt.datetime.strptime(results[-1]["_id"], form.DATE_FMT)
     token_id = token_id.strftime(form.TOKEN_FMT)
 
-    data = {"token": token_id, "results": results}
+    # send the query parameters as reference
+    params = form.data
+    params["start"] = params["start"].strftime(form.DATE_FMT)
+    params["end"] = params["end"].strftime(form.DATE_FMT)
+    params["token"] = params["token"].strftime(form.TOKEN_FMT)
+
+    data = {"token": token_id, "results": results, "params": params}
     return json.jsonify(data)
 
 
