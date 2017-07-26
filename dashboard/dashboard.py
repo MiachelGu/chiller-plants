@@ -6,6 +6,7 @@ from flask import request
 from flask import render_template
 from flask import make_response
 
+import flask
 import config as cfg
 import pymongo
 import datetime
@@ -67,7 +68,14 @@ def logs_api(site):
 
 @app.route("/")
 def index_page():
-    return render_template("index.html")
+    return render_template("dynamic.html")
+
+
+@app.route("/view/<view_type>")
+def dashboard_page(view_type):
+    if view_type not in ["monthly", "daily", "dynamic"]:
+        raise flask.abort(404)
+    return render_template("{}.html".format(view_type))
 
 
 if __name__ == "__main__":

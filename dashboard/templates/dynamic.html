@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}K-Realtime Dynamic View{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-12">
+
+    <!-- user form -->
+    <form class="form-inline" id="form-logs">
+      <div class="form-group">
+        <label class="sr-only" for="form-logs-site">Site</label>
+        <select class="form-control" id="form-logs-site" name="site">
+          <option value="np">North Point</option>
+          <option selected value="insead">Insead</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="sr-only" for="form-logs-start">Start Date</label>
+        <input type="text" class="form-control datepicker" id="form-logs-start" name="start" placeholder="Start 2017-12-30">
+      </div>
+
+      <div class="form-group">
+        <label class="sr-only" for="form-logs-end">End Date</label>
+        <input type="text" class="form-control datepicker" id="form-logs-end" name="end" placeholder="End 2017-12-31">
+      </div>
+
+      <div class="form-group">
+        <label class="sr-only" for="form-logs-freq">Frequency</label>
+        <select class="form-control" id="form-logs-freq" name="freq">
+          <option value="years">Years</option>
+          <option value="days">Days</option>
+          <option value="months">Months</option>
+          <option selected value="hours">Hours</option>
+          <option value="minutes">Minutes</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="sr-only" for="form-logs-field">Parameter</label>
+        <select class="form-control" id="form-logs-field" name="field">
+          <option value="cwshdr">Condenser Water Supply Temp (CWSHDR)</option>
+          <option value="loadsys">System Efficiency (LoadSys)</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="form-logs-submit">Refresh</button>
+    </form>
+
+    <!-- plot -->
+    <div id="plot-logs" style="min-height: 600px;"></div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="text/javascript">
+  $(".datepicker").datepicker({
+      format: "yyyy-mm-dd",
+      autoclose: true,
+      todayHighlight: true,
+  });
+
+  var form = $("#form-logs"); // form
+  var plotElementId = "plot-logs";
+
+  // update form values on loading..
+  var defaultEnd = new Date();
+  var defaultStart = new Date(defaultEnd.getFullYear(), defaultEnd.getMonth(), defaultEnd.getDate()-2)
+  form.find("input[name=end]").datepicker("update", defaultEnd);
+  form.find("input[name=start]").datepicker("update", defaultStart);
+
+  // form submit event binder
+  form.submit(function(event) {
+    event.preventDefault();
+    var submitBtn = form.find("button[type=submit]");
+    submitBtn.html("Loading");
+    submitBtn.prop("disabled", true);
+
+    var site = form.find("select[name=site]").val();
+    var queryParams = {
+      start: form.find("input[name=start]").val(),
+      end: form.find("input[name=end]").val(),
+      freq: form.find("select[name=freq]").val(),
+      field: form.find("select[name=field]").val()
+    };
+
+    $.get("/api/log/" + site, queryParams)
+      .done(function onApiSuccess(data) {
+        var xlabel = "Time";
+        var ylabel = queryParams.field.toUpperCase();
+        plotNewTimeSeries(xlabel, ylabel, data, plotElementId);
+        submitBtn.html("Refresh");
+        submitBtn.prop("disabled", false);
+      })
+      .fail(function onApiFailure(err) {
+        console.log(err);
+        submitBtn.html("Refresh");
+        submitBtn.prop("disabled", false);
+      });
+
+  });
+
+  // create a new time series plot
+  function plotNewTimeSeries(xlabel, ylabel, data, plotElementId) {
+    var layout = {
+      xaxis: {title: xlabel, showgrid: false},
+      yaxis: {title: ylabel, showgrid: false},
+      hovermode: "closest",
+      showlegend: false,
+    };
+
+    var trace = {
+      type: "scatter",
+      mode: "lines+markers",
+      line: {width: 1},
+      x: data.map(function(i) { return new Date(i._id); }),
+      y: data.map(function(i) { return i.value; }),
+    };
+
+    Plotly.newPlot(plotElementId, [trace], layout);
+  }
+
+  // submit the form by default
+  form.submit();
+</script>
+{% endblock %}
