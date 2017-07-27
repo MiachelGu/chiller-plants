@@ -4,38 +4,99 @@
 
 {% block content %}
 <div class="row">
-  <div class="col-md-6">
-    <div class="plot-logs-monthly-1">
+  <div class="col-md-12">
+    <form class="form-inline" id="form-monthly">
+      <div class="form-group">
+        <label class="sr-only" for="form-monthly-site">Site</label>
+        <select class="form-control" id="form-monthly-site" name="site">
+          <option value="np">North Point</option>
+          <option selected value="insead">Insead</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="sr-only" for="form-monthly-start"></label>
+        <input type="text" class="form-control datepicker" id="form-monthly-start" name="start" placeholder="Start 2017-12">
+      </div>
+      <button type="submit" class="btn btn-primary" id="form-monthly-submit">Refresh</button>
+    </form>
   </div>
-  <div class="col-md-6">
-    <div class="plot-logs-monthly-2">
-  </div>
-  <div class="col-md-6">
-    <div class="plot-logs-monthly-3">
-  </div>
-  <div class="col-md-6">
-    <div class="plot-logs-monthly-4">
-  </div>
-  <div class="col-md-6">
-    <div class="plot-logs-monthly-5">
-  </div>
-  <div class="col-md-6">
-    <div class="plot-logs-monthly-6">
-  </div>
-  <div class="col-md-6">
-    <div class="plot-logs-monthly-7">
-  </div>
-  <div class="col-md-6">
-    <div class="plot-logs-monthly-8">
-  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6"><div id="plot-monthly-effsys"></div></div>
+  <div class="col-md-6"><div id="plot-monthly-loadsys"></div></div>
+  <div class="col-md-6"><div id="plot-monthly-hbsys"></div></div>
+  <div class="col-md-6"><div id="plot-monthly-chwshdr"></div></div>
+  <div class="col-md-6"><div id="plot-monthly-chwsfhdr"></div></div>
+  <div class="col-md-6"><div id="plot-monthly-cwshdr"></div></div>
+  <div class="col-md-6"><div id="plot-monthly-cwsfhdr"></div></div>
 </div>
 {% endblock %}
 
 {% block script %}
 <script type="text/javascript">
-      
+  $(".datepicker").datepicker({
+      format: "yyyy-mm",
+      autoclose: true,
+      viewMode: "months",
+      minViewMode: "months",
+  });
 
+  var form = $("#form-monthly");
 
+  // update form values on loading..
+  var today = new Date();
+  form.find("input[name=start]").datepicker("update", today);
 
+  form.submit(function(event) {
+    event.preventDefault();
+    var submitBtn = form.find("button[type=submit]");
+    submitBtn.html("Loading");
+    submitBtn.prop("disabled", true);
+
+    var site = form.find("select[name=site]").val();
+    var inputDate = new Date(form.find("input[name=start]").val());
+
+    // start < timestamp(data) <= end
+    var start = inputDate.addDays(-1); // the last day of previous month
+    var end = inputDate.addMonths(1).addDays(-1); // the last day of selected month
+
+    // fields to query
+    var fields = ["effsys", "loadsys", "hbsys", "chwshdr", "chwsfhdr", "cwshdr", "cwsfhdr"];
+
+    var queryParams = {
+      start: start.toISOString().substring(0, 10),
+      end: end.toISOString().substring(0, 10),
+      freq: "days",
+      func: "avg",
+      fields: fields.join(","),
+    };
+
+    // load the time series plots.. 
+    $.get("/api/v1/logs/" + site, queryParams)
+      .done(function onApiSuccess(data) {
+        if (data.results && data.results.length > 0) {
+          for (f in fields) {
+            var field = fields[f];
+            var xlabel = "Time";
+            var ylabel = field.toUpperCase();
+            var plotElementId = "plot-monthly-" + field;
+            plotNewTimeSeries(xlabel, ylabel, data.results, field, plotElementId);
+          }
+        }
+        submitBtn.html("Refresh");
+        submitBtn.prop("disabled", false);
+      })
+      .fail(function onApiFailure(err) {
+        console.log(err);
+        submitBtn.html("Refresh");
+        submitBtn.prop("disabled", false);
+      })
+
+  })
+
+  $(document).ready(function() {
+    form.submit();
+  })
 </script>
 {% endblock %}

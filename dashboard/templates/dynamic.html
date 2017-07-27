@@ -103,27 +103,9 @@
 
   });
 
-  // create a new time series plot
-  function plotNewTimeSeries(xlabel, ylabel, data, field, plotElementId) {
-    var layout = {
-      xaxis: {title: xlabel, showgrid: false},
-      yaxis: {title: ylabel, showgrid: false},
-      hovermode: "closest",
-      showlegend: false,
-    };
-
-    var trace = {
-      type: "scatter",
-      mode: "lines+markers",
-      line: {width: 1},
-      x: data.map(function(i) { return new Date(i._id); }),
-      y: data.map(function(i) { return i[field]; }),
-    };
-
-    Plotly.newPlot(plotElementId, [trace], layout);
-  }
-
-  // submit the form by default
-  form.submit();
+  // autoload the plot.. 
+  $(document).ready(function() {
+    form.submit();
+  })
 </script>
 {% endblock %}
