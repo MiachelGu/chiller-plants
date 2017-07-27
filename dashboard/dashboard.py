@@ -130,8 +130,7 @@ def logs_api(site):
     """
     form = LogsQueryForm(request.args)
     if not form.validate():
-        data = {"http_code": 400, "errors": form.errors}
-        return flask.make_response(json.jsonify(**data), 400)
+        return flask.make_response(json.jsonify(**form.errors), 400)
 
     # give token precedence to support pagination.
     start_date = form.token.data or form.start.data
