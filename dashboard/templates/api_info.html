@@ -25,70 +25,87 @@
         <tr>
             <th>Query Parameter</th>
             <th>Optional</th>
+            <th>Default Value</th>
             <th>Description</th>
         </tr>
         <tr>
           <td>site-id</td>
-          <td>Yes</td>
+          <td>No</td>
+          <td></td>
           <td>Chiller plant site ID</td>
         </tr>
         <tr>
           <td>start</td>
           <td>Yes</td>
+          <td>2 days before end date</td>
           <td>UTC Date in format %Y-%m-%d. Data logged after this date will be returned</td>
         </tr>
         <tr>
           <td>end</td>
           <td>Yes</td>
+          <td>UTC Today</td>
           <td>UTC Date in format %Y-%m-%d. Data logged on or before this date will be returned</td>
         </tr>
         <tr>
           <td>freq</td>
-          <td>No</td>
+          <td>Yes</td>
+          <td>hours</td>
           <td>Sampling rate of the data. Accepted values: years, months, days, hours, minutes</td>
         </tr>
         <tr>
           <td>fields</td>
           <td>Yes</td>
+          <td></td>
           <td>Comma separated list of chiller plant data fields to return (lowercase)</td>
         </tr>
         <tr>
           <td>order</td>
-          <td>No</td>
+          <td>Yes</td>
+          <td>1</td>
           <td>Order of the returned data. 1 (ascending), -1(descending). The order of comma separated field will be implicitly used as precendence.</td>
         </tr>
         <tr>
           <td>func</td>
-          <td>No</td>
+          <td>Yes</td>
+          <td>avg</td>
           <td>Aggregation function applied on the data. Accepted values: avg (default), max, min, sum</td>
         </tr>
         <tr>
           <td>limit</td>
-          <td>No</td>
+          <td>Yes</td>
+          <td>200</td>
           <td>Maximum number of results to return. At most 200.</td>
         </tr>
         <tr>
           <td>token</td>
-          <td>No</td>
+          <td>Yes</td>
+          <td></td>
           <td>Next page token. Token to query data in the next page</td>
         </tr>
     </table>
     <code>
-      <pre><b>Response Format</b></pre>
       <pre>
-          {
-            "apiVersion": "v1",
-            "queryParams": {
-              # query parameters sent as request
-            },
-            "nextPageToken": # value, 
-            "results": [
-              {
-                "_id": # UTC timestamp,
-                "field": # value,
-              }
-            ]
-          }
+{
+  "apiVersion": "v1", 
+  "nextPageToken": "20170102000000000000", 
+  "queryParams": {
+    "end": "2017-01-02", 
+    "fields": "cwshdr,loadsys", 
+    "freq": "hours", 
+    "func": "max", 
+    "limit": 200, 
+    "order": 1, 
+    "start": "2017-01-01T02:02:20", 
+    "token": ""
+  },
+  "results": [
+    {
+      "_id": "2017-01-01T02:00:00.000", 
+      "cwshdr": 24.7332, 
+      "loadsys": 7.9138
+    }, 
+  ]
+}
         </pre>
     </code>
   </div>

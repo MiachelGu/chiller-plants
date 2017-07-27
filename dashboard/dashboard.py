@@ -23,6 +23,7 @@ class ListField(wtforms.Field):
         return u",".join(self.data) if self.data else u""
 
     def process_formdata(self, data):
+        self._data = data[0] if data else u""
         self.data = [d.strip() for d in data[0].strip(",").split(",")] if data else []
 
 
@@ -41,6 +42,7 @@ class FlexibleDateTimeField(wtforms.Field):
         for fmt in allowed_fmts:
             try:
                 self.data = dt.datetime.strptime(data[0], fmt)
+                self._data = data[0] if data else u""
                 return
             except ValueError:
                 pass
@@ -174,8 +176,11 @@ def logs_api(site):
     db = app.config["db"]
     results = [i for i in db.log.aggregate([step_0, step_1, step_2, step_3])]
 
-    # send the query parameters as reference
+    # send the query parameters as reference (not the parsed ones...)
     params = form.data
+    params["start"] = form.start._data
+    params["end"] = form.end._data
+    params["fields"] = form.fields._data
     if params["token"]:
         params["token"] = params["token"].strftime(form.TOKEN_FMT)
 
