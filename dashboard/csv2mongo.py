@@ -1,4 +1,4 @@
-"""Load existing logs into MongoDB.
+"""Script: Load existing logs into MongoDB.
 
 How to use the script:
 
