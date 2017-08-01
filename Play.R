@@ -1,8 +1,15 @@
+library(lubridate);
+library(xts);
+
+# handy console function..
 clc <- function() {
   cat("\014");
 }
 
-load_df <- function(path, pattern) {
+# load timeseries data
+# path := path containing list of csv files
+# pattern := load the files that follow `pattern`
+load_ts <- function(path, pattern) {
   # load all files
   files <- dir(path=path, pattern=pattern, full.name=TRUE);
   df <- do.call(rbind, lapply(files, read.csv));
@@ -17,12 +24,15 @@ load_df <- function(path, pattern) {
   
   # update data types
   for (c in colnames(df)) {
-    if (c == "timestamp") 
-      func <- function(x) { strptime(x, "%Y-%m-%d %H:%M:%S") }
-    else
-      func <- as.numeric;
-    df[c] = lapply(df[c], func);
+    if (c == "timestamp") {
+      df[c] <- lapply(df[c], ymd_hms);
+    } else {
+      df[c] <- lapply(df[c], as.numeric);
+    }
   }
   
-  df
+  # conver to timeseries.
+  ts <- xts(df, order.by=df$timestamp);
+  
+  ts
 }
