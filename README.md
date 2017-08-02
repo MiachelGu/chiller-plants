@@ -2,7 +2,7 @@
 
 
 ## Record
-
+```txt
 Set A Experiments:
 Explore simple normalized data
 
@@ -64,3 +64,4 @@ Experiment 7:
         First 100 epochs represent different architecture.. Ignore that!
     Opinion:
         Looks like it fit the sample series well but the MAPE looks terrible. Need to figure this out.
+```
