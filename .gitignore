@@ -9,3 +9,5 @@ docs
 old_work
 papers
 output/keras*
+.RData
+.Rhistory
