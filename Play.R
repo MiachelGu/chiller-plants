@@ -9,7 +9,7 @@ clc <- function() {
 # load timeseries data
 # path := path containing list of csv files
 # pattern := load the files that follow `pattern`
-load_ts <- function(path, pattern) {
+load_df <- function(path, pattern) {
   # load all files
   files <- dir(path=path, pattern=pattern, full.name=TRUE);
   df <- do.call(rbind, lapply(files, read.csv));
@@ -32,7 +32,7 @@ load_ts <- function(path, pattern) {
   }
   
   # conver to timeseries.
-  ts <- xts(df, order.by=df$timestamp);
+  df <- xts(df, order.by=df$timestamp);
   
-  ts
+  df
 }
