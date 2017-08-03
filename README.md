@@ -7,6 +7,7 @@ Set A Experiments:
 Explore simple normalized data
 
 Experiment 0:
+
     LSTM Trail run. Layer 1: 15 Nodes, Layer 2: 10 Nodes, Adam + MSE
     Log Dir: Kaer1
     Features: ["loadsys", "drybulb", "rh", "cwrhdr", "cwsfhdr"]
@@ -60,8 +61,26 @@ Experiment 7:
     LSTM: Layer 1: 32*3, Layer 2: 32, Layer 3: 4.
     Features: ["loadsys_seasonal", "drybulb_seasonal", "rh_seasonal", "cwrhdr_seasonal"]
     Target: ["cwshdr_seasonal"]
-    Log Dir: Kaer8
-        First 100 epochs represent different architecture.. Ignore that!
-    Opinion:
-        Looks like it fit the sample series well but the MAPE looks terrible. Need to figure this out.
+    Log Dir: Kaer8. First 100 epochs represent different architecture.. Ignore that!
+    Opinion: Looks like it generalized decently, but its not up to the expectations.
+
+    LSTM: Layer 1: 32*3, Layer 2: 32, Layer 3: 4.
+    Features: ["loadsys_resid", "drybulb_resid", "rh_resid", "cwrhdr_resid"]
+    Target: ["cwshdr_resid"]
+    Log Dir: Kaer9
+    Opinion: Shit.. 
+
+    LSTM: Layer 1: 70
+    Features: ["loadsys_resid", "drybulb_resid", "rh_resid", "ctkw_resid"]
+    Target: ["cwshdr_resid"]
+    Log Dir: Kaer10. Mixed with several models. 
+    Opinion: Another shit
+
+    LSTM: Layer 1: 70
+    Features: ["loadsys_resid", "drybulb_resid", "rh_resid", "cwrhdr_resid"]
+    Target: ["cwshdr_resid"]
+    Log Dir: Kaer11
+    Opinion: Gosh, I forgot to ensure the data to Keras is normalized..
+        The residue is able to give decent MAPE.
+
 ```
