@@ -52,7 +52,7 @@ class FlexibleDateTimeField(wtforms.Field):
 class LogsQueryForm(wtforms.Form):
     """Form for Logs API query parameters."""
 
-    # rather naive.. but would be okay.
+    # naive.. but would be okay.
     TOKEN_FMT   = "%Y%m%d%H%M%S%f"
 
     start       = FlexibleDateTimeField()
@@ -161,6 +161,7 @@ def logs_api(site):
         "$group": {"_id": {"$dateToString": {"format": group_by, "date": "$timestamp"}}}}
 
     # find avg of all the `fields` mentioned in query params
+    # Eg: "$group": { "cwshdr": { "avg": "$cwshdr" } }
     func = "${}".format(form.func.data)
     for f in form.fields.data:
         step_1["$group"][f] = {func: "${}".format(f)}
