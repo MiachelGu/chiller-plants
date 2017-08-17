@@ -33,38 +33,77 @@ def load_df(src, pattern):
 
 
 ## Data Preprocessing
-
-def remove_negatives(df, columns=[]):
-    columns = columns or df.columns
-    for col in columns:
-        df.loc[df[col] < 0, col] = 0
-    return df
-
-def identify_ct_shutdown(df, ctkw_cols=[], thresh=0.1):
-    ctkw_cols = ctkw_cols or [i for i in df.columns if i.startswith("ct") and i.endswith("kw")]
-    for col in ctkw_cols:
-        df[col + "_shutdown"] = 0
-        df.loc[df[col] < thresh, col + "_shutdown"] = 1
-    return df
-
-def replace_missing(df, columns=[]):
-    columns = columns or df.columns
-    rolling_avg = df[columns].rolling(10, min_periods=1).mean()
-    df[columns] = df[columns].fillna(rolling_avg).fillna(method="ffill")
-    return df
-
-def get_normalized_df(dataframe, scale=(0,1), columns=[]):
-    # columns and index
-    columns = columns or dataframe.columns
-    index = dataframe.index.values
+class Process:
     
-    # fit the scaler
-    scaler = preprocessing.MinMaxScaler(scale)
-    dataframe = pd.DataFrame(scaler.fit_transform(dataframe), columns=columns, index=index)
-    
-    # attach the scaler..
-    dataframe.scaler = scaler
-    return dataframe
+    # replace nulls with rolling mean or near ones
+    @staticmethod
+    def replace_nulls(df, cols=[]):
+        cols = cols or df.columns
+        mean = df[cols].rolling(5, min_periods=1).mean()
+        df[cols] = df[cols].fillna(mean)
+        df[cols] = df[cols].fillna(method="pad")
+        return df
+
+    # create binary cols. 1 if > thresh, 0 if <= thresh
+    @staticmethod
+    def create_binary_cols(df, cols=[], thresh=0.1):
+        cols = cols or df.columns
+        for c in cols:
+            binzr = preprocessing.Binarizer(thresh).fit(df[c])
+            df[c + "_bin"] = binzr.transform(df[c])
+        return df
+
+    # set values < thresh to 0
+    @staticmethod
+    def replace_with_zero(df, cols=[], thresh=0.1):
+        cols = cols or df.columns
+        cols = [i for i in cols if not i.endswith("_bin")] # ignore step 2 cols
+        for c in cols:
+            df.loc[df[c] < thresh, c] = 0
+        return df
+
+
+    # replace values < thresh with near values
+    @staticmethod
+    def replace_with_near(df, cols=[], thresh=0.1):
+        cols = cols or df.columns
+        cols = [i for i in cols if not i.endswith("_bin")] # ignore step 2 cols
+        for c in cols:
+            df.loc[df[c] < thresh, c] = np.nan
+        df[cols] = df[cols].fillna(method="pad")
+        return df
+
+
+    # create ctkw total
+    @staticmethod
+    def set_ctwk_total(df, cols=[]):
+        cols = cols or df.columns
+        ctkw_cols = [i for i in cols if i.startswith("ct") and i.endswith("kw")]
+        df["cwkw_sum"] = df[ctkw_cols].sum(axis=1)
+        return df
+
+
+    # remove random noise. do some soft smoothing.
+    @staticmethod
+    def smooth_data(df, cols=[]):
+        cols = cols or df.columns
+        df[cols] = df[cols].rolling(10, min_periods=1).mean()
+
+    @staticmethod
+    def get_normalized_df(dataframe, scale=(0.1,1), cols=[]):
+        # columns and index
+        columns = cols or dataframe.columns
+        index = dataframe.index.values
+
+        # fit the scaler
+        dataframe = dataframe[columns]
+        scaler = preprocessing.MinMaxScaler(scale)
+        dataframe = pd.DataFrame(scaler.fit_transform(dataframe), columns=columns, index=index)
+
+        # attach the scaler..
+        dataframe.scaler = scaler
+        return dataframe
+
 
 ## Feature Processing
 
