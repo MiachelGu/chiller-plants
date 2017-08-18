@@ -88,6 +88,7 @@ class Process:
     def smooth_data(df, cols=[]):
         cols = cols or df.columns
         df[cols] = df[cols].rolling(10, min_periods=1).mean()
+        return df
 
     @staticmethod
     def get_normalized_df(dataframe, scale=(0.1,1), cols=[]):
