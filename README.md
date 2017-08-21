@@ -12,3 +12,11 @@
     Target: ["cwshdr"]
     Lookback: 15
 
+    cwshdr3.h5
+    Features: ["loadsys", "drybulb", "rh", "cwrhdr", "cwsfhdr"]
+    Target: ["cwshdr"]
+    Lookback: 15
+    Distillation. 75-150-150
+
+    
+
