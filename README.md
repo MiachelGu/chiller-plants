@@ -18,5 +18,8 @@
     Lookback: 15
     Distillation. 75-150-150
 
-    
-
+## Setup Notes
+    FastDTW falls back to pure Python and doesn't. Execute `python setup.py build` 
+    and see whether the build is executed successfully. On Windows, need to run
+        Ref to fix Windows: https://stackoverflow.com/questions/43847542/
+        Ref to fix Linux: < need to figure out >
