@@ -336,55 +336,24 @@ def logs_api(site):
     if not form.validate():
         return flask.make_response(json.jsonify(**form.errors), 400)
 
-    # give token precedence to support pagination.
-    start_date = form.token.data or form.start.data
-
-    # first filter the logs by timestamp
-    # Assuming timeperiod is going to be relatively smaller than collection size,
-    # the B+ Tree search space would highly reduced in further operations.
-    # Note: Create an index on timestamp
-    step_0 = {
-        "$match": {
-            "timestamp": {"$gt": start_date, "$lte": form.end.data},
-            "_site": site
-        }
-    }
-
-    # used to group data by timestamp
-    dt_format = {
-        "years"   : "%Y-01-01T00:00:00.000",
-        "months"  : "%Y-%m-01T00:00:00.000",
-        "days"    : "%Y-%m-%dT00:00:00.000",
-        "hours"   : "%Y-%m-%dT%H:00:00.000",
-        "minutes" : "%Y-%m-%dT%H:%M:%S.000"
-    }
-
-    # Now, group the documents with timestamp and `group_by` as format
-    group_by = dt_format.get(form.freq.data)
-    step_1 = {
-        "$group": {"_id": {"$dateToString": {"format": group_by, "date": "$timestamp"}}}}
-
-    # find avg of all the `fields` mentioned in query params
-    # Eg: "$group": { "cwshdr": { "avg": "$cwshdr" } }
-    func = "${}".format(form.func.data)
-    for f in form.fields.data:
-        step_1["$group"][f] = {func: "${}".format(f)}
-
-    # sort the data..
-    step_2 = {"$sort": {"_id": form.order.data}}
-
-    # query data
-    db = app.config["db"]
-    results = [i for i in db.log.aggregate([step_0, step_1, step_2])]
+    # query data..
+    # Note: give preference to token (for pagination) -- but this is meaningless
+    # as I removed `limit` feature.. 
+    cursor = query_logs(
+        site=site,
+        fields=form.token.data or form.fields.data,
+        start=form.start.data,
+        end=form.end.data,
+        freq=form.freq.data,
+        aggregate=form.func.data,
+        order=form.order.data)
+    results = [i for i in cursor]
 
     # send the query parameters as reference (not the parsed ones...)
     params = form.data
     params["start"] = form.start._data
     params["end"] = form.end._data
     params["fields"] = form.fields._data
-    if params["token"]:
-        params["token"] = params["token"].strftime(form.TOKEN_FMT)
-
     response = {
         "results": results,
         "queryParams": params,
