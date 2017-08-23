@@ -4,92 +4,76 @@ import pandas as pd
 import datetime as dt
 import pytz
 import pprint
+import process
 
 client = pymongo.MongoClient(tz_aware=True)
-db = client.dashboard
-start = dt.datetime(2017,1,1, 1,0,0,tzinfo=pytz.UTC)
-end = dt.datetime(2017,1,1, 1,5,0,tzinfo=pytz.UTC)
 
 
-def find_abnormalities(field, start, end, lookback=1, freq="minutes"):
-    """Find abnormalities in chiller plant timeseries. 
+def preprocess_flow(df):
+    cols = ["value"]
+    df = process.replace_nulls(df, cols=cols)
+    df = process.replace_with_near(df, cols=cols)
+    df = process.smooth_data(df, cols=cols)
+    df = process.get_normalized_df(df, cols=cols)
+    return df
 
-    Args
-        field     := String, chiller plant parameter
-        start     := Datetime, start time of time series
-        end       := Datetime, end time of time series
-        lookback  := Int, compare each time series value x(t) with past value x(t-lookback)
-        freq      := String, frequence of time series
-    Returns
-        List, timestamp and values that are identified as abnormal
-    """
-    delta = dt.timedelta(**{freq: lookback})
 
-    # x1 := [t, t-1, t-2, t-3, ... t-N]
-    #
-    # x2 := [t-1, t-2, t-3, t-4, ... t-N-1] for lookback = 1
-    # x2 := [t-2, t-3, t-4, t-5, ... t-N-2] for lookback = 2...
-    #
-    # This could be done in Pandas with fewer lines but I guess performance
-    # is better in Mongo.
-    step0 = {
-        "$facet": {
-            "x1": [ 
-                {
-                    "$match": {
-                        "timestamp": {"$gt": start, "$lte": end}
-                    }
-                },
-                {
-                    "$sort": {"_id": -1}
-                },
-                {
-                    "$project": {
-                        field: 1, "timestamp": 1, "_id": 0,
-                    }
-                }
-            ],
+def find_frequency_based_abnormalities(train, test, limit=(0.1, 0.9), delta=10, field="value"):
+    # hours
+    train["hour"] = train.index.hour
+    test["hour"] = test.index.hour
 
-            "x2": [
-                {
-                    "$match": {
-                        "timestamp": {"$gt": start-delta, "$lte": end-delta}
-                    }
-                },
-                {
-                    "$sort": {"_id": -1}
-                },
-                {
-                    "$project": {
-                        field: 1, "timestamp": 1, "_id": 0,
-                    }
-                }
-            ]
-        }
-    }
+    # rate of change
+    train["rate"] = (train[field] - train[field].shift(delta)).fillna(method="pad")
+    test["rate"] = (test[field] - test[field].shift(delta)).fillna(method="pad")
 
-    # Extract data. 
-    result = db.log.aggregate([step0]).next()
-    x1 = pd.DataFrame(result["x1"])
-    x2 = pd.DataFrame(result["x2"])
+    # upper and lower limits grouped by hour
+    min_per_hr = train.groupby(["hour"]).quantile(limit[0]).rate
+    max_per_hr = train.groupby(["hour"]).quantile(limit[1]).rate
 
-    # Calculate (x1-x2). 
-    # TODO: Can we do this directly in Mongo?
-    first_diff = (x1-x2).drop("timestamp", axis=1)
+    # max and min limits of test data (based on train data)
+    test["min_value"] = test.hour.apply(lambda x: min_per_hr.iloc[int(x)])
+    test["max_value"] = test.hour.apply(lambda x: max_per_hr.iloc[int(x)])
 
-    # Filter abnormalities
-    window_size = 50 # 50-units back.. 
-    abs_mean_func = lambda x: np.abs(np.mean(x))
-    mean = first_diff.rolling(window_size, min_periods=1).apply(abs_mean_func)
+    # is this abnormal?
+    is_abnormal = (test[field] < test.min_value) | (test[field] > test.max_value)
+
+    return is_abnormal
+
+
+def main():
+    # database
+    db = client.dashboard
+
+    # get historic data for calculating frequency
+    start_date = dt.datetime(2017, 1, 1, tzinfo=pytz.UTC)
+    end_date = dt.datetime(2017, 1, 15, tzinfo=pytz.UTC)
+    query = {"timestamp": {"$gt": start_date, "$lte": end_date}}
+    train_df = pd.DataFrame(
+        [(i["cwshdr"], i["timestamp"]) for i in db.log.find(query)], 
+        columns=("value", "timestamp")).set_index("timestamp")
+    train_df = preprocess_flow(train_df)
+
+    # get test data
+    start_date = dt.datetime(2017, 1, 16, tzinfo=pytz.UTC)
+    end_date = dt.datetime(2017, 1, 16, 1, tzinfo=pytz.UTC)
+    query = {"timestamp": {"$gt": start_date, "$lte": end_date}}
+    test_df = pd.DataFrame(
+        [(i["cwshdr"], i["timestamp"]) for i in db.log.find(query)], 
+        columns=("value", "timestamp")).set_index("timestamp")
+    test_df = preprocess_flow(test_df)
+
+    resp = find_frequency_based_abnormalities(train_df, test_df)
+
+    pprint.pprint(resp)
 
 
 
-    # Filter out abnormal values in x1.
-    # Definition(s) of abnormality
-    return result
 
 
+if __name__ == "__main__":
+    main()
 
-data = find_abnormalities("cwshdr", start, end)
-pprint.pprint(data)
 
+# data = find_abnormalities("cwshdr", start, end)
+# pprint.pprint(data)

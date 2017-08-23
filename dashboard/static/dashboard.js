@@ -21,22 +21,6 @@ function plotNewTimeSeries(title, xlabel, ylabel, data, field, plotElementId) {
   Plotly.newPlot(plotElementId, [trace], layout);
 }
 
-
-// plots on existing time series
-function plotTimeSeries(title, data, field, plotElementId) {
-  var trace = {
-    name: title,
-    type: "scatter",
-    mode: "lines+markers",
-    line: {width: 1},
-    x: data.map(function(i) { return new Date(i._id); }),
-    y: data.map(function(i) { return i[field]; }),
-  };
-
-  Plotly.addTraces(plotElementId, trace, 0);
-}
-
-
 // datetime..
 Date.prototype.addDays = function(days) {
   var d = new Date(this.valueOf());
