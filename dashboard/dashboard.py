@@ -61,7 +61,6 @@ class LogsQueryForm(wtforms.Form):
     fields      = ListField()
     order       = wtforms.IntegerField()
     token       = wtforms.StringField()
-    limit       = wtforms.IntegerField()
     func        = wtforms.StringField()
 
     def validate_start(self, field):
@@ -95,11 +94,6 @@ class LogsQueryForm(wtforms.Form):
                 field.data = field.data.replace(tzinfo=pytz.UTC)
             except ValueError:
                 raise wtforms.ValidationError("token {} is invalid".format(field.data))
-
-    def validate_limit(self, field):
-        if not field.data:
-            field.data = 200
-        field.data = min(field.data, 200)
 
     def validate_func(self, field):
         allowed_funcs = ["avg", "sum", "max", "min"]
@@ -169,12 +163,9 @@ def logs_api(site):
     # sort the data..
     step_2 = {"$sort": {"_id": form.order.data}}
 
-    # limit the results (don't want irritate http)
-    step_3 = {"$limit": form.limit.data}
-
     # query data
     db = app.config["db"]
-    results = [i for i in db.log.aggregate([step_0, step_1, step_2, step_3])]
+    results = [i for i in db.log.aggregate([step_0, step_1, step_2])]
 
     # send the query parameters as reference (not the parsed ones...)
     params = form.data
