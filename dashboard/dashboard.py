@@ -106,8 +106,8 @@ def find_frequency_based_abnormalities(train, test, limit=(0.1, 0.9), delta=10, 
     test["hour"] = test.index.hour
 
     # rate of change
-    train["rate"] = (train[field] - train[field].shift(delta)).fillna(method="pad")
-    test["rate"] = (test[field] - test[field].shift(delta)).fillna(method="pad")
+    train["rate"] = (train[field] - train[field].shift(delta)).fillna(0)
+    test["rate"] = (test[field] - test[field].shift(delta)).fillna(0)
 
     # upper and lower limits grouped by hour
     min_per_hr = train.groupby(["hour"]).quantile(limit[0]).rate
@@ -118,9 +118,9 @@ def find_frequency_based_abnormalities(train, test, limit=(0.1, 0.9), delta=10, 
     test["max_rate"] = test.hour.apply(lambda x: max_per_hr.iloc[int(x)])
 
     # is this abnormal?
-    is_abnormal = (test.rate < test.min_rate) | (test.rate > test.max_rate)
+    test["abnormal"] = (test.rate < test.min_rate) | (test.rate > test.max_rate)
 
-    return is_abnormal
+    return test[ ["min_rate", "max_rate", "abnormal", "rate"] ]
 
 
 @app.route("/api/v1/abnormalities/<site>", methods=["GET"])
@@ -172,13 +172,19 @@ def frequency_based_abnormalities_api(site):
     train_df = preprocess_flow_1(train_df, cols=["value"])
 
     # find abnormalities
-    test_df["abnormal"] = find_frequency_based_abnormalities(train_df, test_df)
+    resp_df = find_frequency_based_abnormalities(train_df, test_df)
 
     # prepare response
-    results = [
-        {"_id": idx.strftime("%Y-%m-%dT%H:%M:%S.%f"), "value": i[0], "abnormal": i[1]}
-        for i, idx in zip(test_df[ ["value", "abnormal"] ].values, test_df.index)
-    ]
+    results = []
+    for idx, r1, r2 in zip(test_df.index, resp_df.values, test_df.value.values):
+        results.append({
+            "_id": idx.strftime("%Y-%m-%dT%H:%M:%S.%f"),
+            "min_value": r1[0],
+            "max_value": r1[1],
+            "abnormal": r1[2],
+            "value": r2, # this value is "preprocessed" one. Its not "exactly" same as original.
+            "rate": r1[3]
+        })
 
     params = form.data
     params["start"] = form.start._data
