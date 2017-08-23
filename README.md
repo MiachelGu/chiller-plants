@@ -25,4 +25,5 @@
         Ref to fix Linux: < need to figure out >
 
 ## Dashboard
-    ![Dashboard Screenshot](/output/dashboard1.png?raw=true "Condenser Water Supper Temperature")
+
+![Dashboard Screenshot](/output/dashboard1.png?raw=true "Condenser Water Supper Temperature")
