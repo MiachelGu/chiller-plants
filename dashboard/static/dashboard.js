@@ -1,15 +1,31 @@
 // dashboard
 
 // create a new time series plot
-function plotNewTimeSeries(xlabel, ylabel, data, field, plotElementId) {
+function plotNewTimeSeries(title, xlabel, ylabel, data, field, plotElementId) {
   var layout = {
     xaxis: {title: xlabel, showgrid: false},
     yaxis: {title: ylabel, showgrid: false},
     hovermode: "closest",
-    showlegend: false,
   };
 
   var trace = {
+    name: title,
+    type: "scatter",
+    mode: "lines+markers",
+    line: {width: 1},
+    marker: {color: "blue"},
+    x: data.map(function(i) { return new Date(i._id); }),
+    y: data.map(function(i) { return i[field]; }),
+  };
+
+  Plotly.newPlot(plotElementId, [trace], layout);
+}
+
+
+// plots on existing time series
+function plotTimeSeries(title, data, field, plotElementId) {
+  var trace = {
+    name: title,
     type: "scatter",
     mode: "lines+markers",
     line: {width: 1},
@@ -17,8 +33,9 @@ function plotNewTimeSeries(xlabel, ylabel, data, field, plotElementId) {
     y: data.map(function(i) { return i[field]; }),
   };
 
-  Plotly.newPlot(plotElementId, [trace], layout);
+  Plotly.addTraces(plotElementId, trace, 0);
 }
+
 
 // datetime..
 Date.prototype.addDays = function(days) {

@@ -72,7 +72,8 @@
   form.find("input[name=end]").datepicker("update", defaultEnd);
   form.find("input[name=start]").datepicker("update", defaultStart);
 
-  // form submit event binder
+  // form submit event binder.
+  // TODO: This entire thing can be done very neatly.. 
   form.submit(function(event) {
     event.preventDefault();
     var submitBtn = form.find("button[type=submit]");
@@ -80,26 +81,65 @@
     submitBtn.prop("disabled", true);
 
     var site = form.find("select[name=site]").val();
-    var queryParams = {
+    
+    var query1 = {
       start: form.find("input[name=start]").val(),
       end: form.find("input[name=end]").val(),
       freq: form.find("select[name=freq]").val(),
       fields: form.find("select[name=fields]").val()
     };
 
-    $.get("/api/v1/logs/" + site, queryParams)
-      .done(function onApiSuccess(data) {
-        var xlabel = "Time";
-        var ylabel = queryParams.fields.toUpperCase();
-        plotNewTimeSeries(xlabel, ylabel, data.results, queryParams.fields, plotElementId);
-        submitBtn.html("Refresh");
-        submitBtn.prop("disabled", false);
-      })
-      .fail(function onApiFailure(err) {
-        console.log(err);
-        submitBtn.html("Refresh");
-        submitBtn.prop("disabled", false);
-      });
+    var query2 = {
+      start: form.find("input[name=start]").val(),
+      end: form.find("input[name=end]").val(),
+      freq: form.find("select[name=freq]").val(),
+      field: form.find("select[name=fields]").val() // key is the only change!
+    };
+
+
+    var req1 = $.get("/api/v1/logs/" + site, query1);
+    var req2 = $.get("/api/v1/abnormalities/" + site, query2);
+
+    $.when(req1, req2)
+    .done(function(arr1, arr2) {
+      var timeseries = arr1[0].results;
+      var abnormalities = arr2[0].results;
+      var field = query1.fields;
+
+      var layout = {
+        xaxis: {title: "Time", showgrid: false},
+        yaxis: {title: field, showgrid: false},
+        hovermode: "closest",
+      };
+
+      var trace1 = {
+        name: query1.fields,
+        type: "scatter",
+        mode: "lines+markers",
+        line: {width: 1},
+        marker: {color: "black"},
+        x: timeseries.map(function(i) { return new Date(i._id); }),
+        y: timeseries.map(function(i) { return i[field]; }),
+      };
+
+      var trace2 = {
+        name: "Abnormalities",
+        type: "scatter",
+        mode: "markers",
+        marker: {color: "orange"},
+        x: abnormalities.map(function(i) { return new Date(i._id); }),
+        y: abnormalities.map(function(i, idx) { return i.abnormal ? timeseries[idx][field] : null }),
+      };
+
+      Plotly.newPlot(plotElementId, [trace1, trace2], layout);
+
+      submitBtn.html("Refresh");
+      submitBtn.prop("disabled", false);
+    })
+    .fail(function(err) {
+      submitBtn.html("Refresh");
+      submitBtn.prop("disabled", false);
+    });
 
   });
 
