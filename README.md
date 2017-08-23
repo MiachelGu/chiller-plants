@@ -23,3 +23,6 @@
     and see whether the build is executed successfully. On Windows, need to run
         Ref to fix Windows: https://stackoverflow.com/questions/43847542/
         Ref to fix Linux: < need to figure out >
+
+## Dashboard
+    <img src="./output/dashboard1.png" />
