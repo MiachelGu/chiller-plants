@@ -367,7 +367,9 @@ def forecast_api(site):
         i["timestamp"] = i.pop("_id")
         i["timestamp"] = dt.datetime.strptime(i["timestamp"], "%Y-%m-%dT%H:%M:%S.%f")
         data.append(i)
-    df = pd.DataFrame(data).set_index("timestamp")
+
+    columns = features + target + ["timestamp"]
+    df = pd.DataFrame(data, columns=columns).set_index("timestamp")
 
     # preprocess this data..
     df = process.replace_nulls(df, cols=features+target)
@@ -384,7 +386,7 @@ def forecast_api(site):
     y = process.Reshape.y(y)
 
     # may the model forecast as good as a saint....
-    predict_y = model.predict(X, batch_size=1)
+    predict_y = model.predict(X, batch_size=1) if X.shape[0] > 0 else np.array([])
     predict_y = process.Reshape.inv_y(predict_y)
 
     # inverse normalize
@@ -397,6 +399,7 @@ def forecast_api(site):
 
     # prepare response
     results = []
+    df = df[lookback:] # we retrieved little extra.. 
     for idx, t, y in zip(df.index, df[target].values, predict_y):
         results.append({
             "_id": idx.strftime("%Y-%m-%dT%H:%M:%S.%f"),

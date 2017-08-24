@@ -58,7 +58,7 @@ def prepare_features(dataframe, features, target, N=1):
     features_data = dataframe[features].values
     target_data = dataframe[target].values
     
-    for i in range(dataframe.shape[0]-N-1):
+    for i in range(dataframe.shape[0]-N):
         x.append(features_data[i:i+N])
         y.append(target_data[i+N])
     
@@ -73,6 +73,8 @@ class Reshape:
     @staticmethod
     def x(a):
         """Reshape N-Dim feature vectors into 1D that Keras accepts."""
+        if a.shape[0] == 0:
+            return a.reshape((0, 1, 0))
         return a.reshape((a.shape[0], 1, a.shape[1] * a.shape[2]))
         
     @staticmethod
