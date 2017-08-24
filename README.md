@@ -26,4 +26,9 @@
 
 ## Dashboard
 
-![Dashboard Screenshot](/output/dashboard1.png?raw=true "Condenser Water Supper Temperature")
+Notes:
+
+* I think ML model isn't releasing memory after usage.. Check this out!!
+
+![Dashboard Screenshot](/output/dashboard1.png?raw=true "Dynamic View")
+![Dashboard Screenshot](/output/dashboard2.png?raw=true "Monthly View")
