@@ -101,6 +101,7 @@
 
     var req1 = $.get("/api/v1/logs/" + site, query1);
     var req2 = $.get("/api/v1/abnormalities/" + site, query2);
+    var req3 = $.get("/api/v1/forecast/" + site, query2);
 
     $.when(req1, req2)
     .done(function(arr1, arr2) {
@@ -115,9 +116,9 @@
       };
 
       var trace1 = {
-        name: query1.fields,
+        name: "Acutal",
         type: "scatter",
-        mode: "lines+markers",
+        mode: "lines",
         line: {width: 1},
         marker: {color: "black"},
         x: timeseries.map(function(i) { return new Date(i._id); }),
@@ -125,10 +126,10 @@
       };
 
       var trace2 = {
-        name: "Abnormalities",
+        name: "Abnormality",
         type: "scatter",
         mode: "markers",
-        marker: {color: "orange"},
+        marker: {color: "orange", size: 4},
         x: abnormalities.map(function(i) { return new Date(i._id); }),
         y: abnormalities.map(function(i, idx) { return i.abnormal ? timeseries[idx][field] : null }),
       };
@@ -136,7 +137,7 @@
       var trace3 = {
         name: "Rate (min threshold)",
         type: "scatter",
-        mode: "lines+markers",
+        mode: "lines",
         marker: {color: "pink"},
         x: abnormalities.map(function(i) { return new Date(i._id); }),
         y: abnormalities.map(function(i, idx) { return i.min_value }),
@@ -145,7 +146,7 @@
       var trace4 = {
         name: "Rate (Max threshold)",
         type: "scatter",
-        mode: "lines+markers",
+        mode: "lines",
         marker: {color: "pink"},
         x: abnormalities.map(function(i) { return new Date(i._id); }),
         y: abnormalities.map(function(i, idx) { return i.max_value }),
@@ -154,14 +155,30 @@
       var trace5 = {
         name: "Rate",
         type: "scatter",
-        mode: "lines+markers",
+        mode: "lines",
         marker: {color: "red"},
         x: abnormalities.map(function(i) { return new Date(i._id); }),
         y: abnormalities.map(function(i, idx) { return i.rate }),
       };
 
-      Plotly.newPlot(plotElementId, [trace1, trace2 ], layout);
+      Plotly.newPlot(plotElementId, [trace1, trace2], layout);
       Plotly.newPlot(plotElementId2, [trace3, trace4, trace5], layout);
+
+
+      // get the forecast.. slowly..
+      req3
+      .done(function(data) {
+        var trace6 = {
+          name: "Predicted",
+          type: "scatter",
+          mode: "lines",
+          marker: {color: "grey"},
+          x: data.results.map(function(i) { return new Date(i._id); }),
+          y: data.results.map(function(i, idx) { return i.predicted }),
+        };
+
+        Plotly.addTraces(plotElementId, [trace6]);
+      })
 
       submitBtn.html("Refresh");
       submitBtn.prop("disabled", false);
