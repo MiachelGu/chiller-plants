@@ -226,8 +226,8 @@ def logs_api(site):
     # as I removed `limit` feature.. 
     cursor = query_logs(
         site=site,
-        fields=form.token.data or form.fields.data,
-        start=form.start.data,
+        fields=form.fields.data,
+        start=form.token.data or form.start.data,
         end=form.end.data,
         freq=form.freq.data,
         aggregate=form.func.data,
