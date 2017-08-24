@@ -35,9 +35,6 @@ def smooth_data(df, cols=[]):
 
 # normalize dataframe
 def get_normalized_df(df, scale=(0.1,1), cols=[]):
-    if df.shape[0] == 0:
-        return df
-
     # columns and index
     columns = cols or df.columns
     index = df.index.values

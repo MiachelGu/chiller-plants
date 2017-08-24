@@ -372,16 +372,13 @@ def forecast_api(site):
     df = pd.DataFrame(data, columns=columns).set_index("timestamp")
 
     # preprocess this data..
-    df = process.replace_nulls(df, cols=features+target)
-    df = process.replace_with_near(df, cols=features+target)
-    df = process.get_normalized_df(df, cols=features+target)
+    if df.shape[0] > 0:
+        df = process.replace_nulls(df, cols=features+target)
+        df = process.replace_with_near(df, cols=features+target)
+        df = process.get_normalized_df(df, cols=features+target)
 
     # prepare input vectors for forecast model
-    X, y = process.prepare_features(
-        dataframe=df,
-        features=features,
-        target=target, 
-        N=lookback)
+    X, y = process.prepare_features(df, features, target, lookback)
     X = process.Reshape.x(X)
     y = process.Reshape.y(y)
 
@@ -389,13 +386,14 @@ def forecast_api(site):
     predict_y = model.predict(X, batch_size=1) if X.shape[0] > 0 else np.array([])
     predict_y = process.Reshape.inv_y(predict_y)
 
-    # inverse normalize
-    target_idx = -1 # the index of target vector in `features+target`
-    predict_y -= df.scaler.min_[target_idx]
-    predict_y /= df.scaler.scale_[target_idx]
+    if df.shape[0] > 0:
+        # inverse normalize
+        target_idx = -1 # the index of target vector in `features+target`
+        predict_y -= df.scaler.min_[target_idx]
+        predict_y /= df.scaler.scale_[target_idx]
 
-    df[target] -= df.scaler.min_[target_idx]
-    df[target] /= df.scaler.scale_[target_idx]
+        df[target] -= df.scaler.min_[target_idx]
+        df[target] /= df.scaler.scale_[target_idx]
 
     # prepare response
     results = []
