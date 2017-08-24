@@ -13,7 +13,7 @@ function plotNewTimeSeries(title, xlabel, ylabel, data, field, plotElementId) {
     type: "scatter",
     mode: "lines+markers",
     line: {width: 1},
-    marker: {color: "blue"},
+    marker: {color: "black"},
     x: data.map(function(i) { return new Date(i._id); }),
     y: data.map(function(i) { return i[field]; }),
   };

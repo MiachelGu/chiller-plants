@@ -33,6 +33,7 @@ def smooth_data(df, cols=[]):
     return df
 
 
+# normalize dataframe
 def get_normalized_df(df, scale=(0.1,1), cols=[]):
     if df.shape[0] == 0:
         return df
@@ -49,3 +50,37 @@ def get_normalized_df(df, scale=(0.1,1), cols=[]):
     # attach the scaler..
     df.scaler = scaler
     return df
+
+
+# prepare feature vectors for keras
+def prepare_features(dataframe, features, target, N=1):
+    x, y = [], []
+    features_data = dataframe[features].values
+    target_data = dataframe[target].values
+    
+    for i in range(dataframe.shape[0]-N-1):
+        x.append(features_data[i:i+N])
+        y.append(target_data[i+N])
+    
+    x = np.array(x)
+    y = np.array(y)
+    return x, y
+
+
+class Reshape:
+    """Keras shape requirements."""
+
+    @staticmethod
+    def x(a):
+        """Reshape N-Dim feature vectors into 1D that Keras accepts."""
+        return a.reshape((a.shape[0], 1, a.shape[1] * a.shape[2]))
+        
+    @staticmethod
+    def y(a):
+        """Reshape target vectors that Keras accepts."""
+        return a.reshape((a.shape[0], 1, 1))
+    
+    @staticmethod
+    def inv_y(a):
+        """Inverse shape target vectors. Comes handy!"""
+        return a.reshape(a.shape[0],)

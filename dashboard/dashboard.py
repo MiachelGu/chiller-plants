@@ -8,12 +8,61 @@ import pymongo
 import pytz
 import process
 import forms
+import os
 
 from flask import json
 from flask import request
+from functools import lru_cache
+
+os.environ["KERAS_BACKEND"] = "tensorflow"
+
+from keras.models import load_model, model_from_json
 
 
 app = flask.Flask(__name__)
+
+
+@lru_cache(maxsize=None)
+def load_keras_model(rel_path):
+    """Load keras h5 model file
+
+    Model is cached in memory and server restart is 
+    necessary to observe any changes to the model file.
+
+    NOTE/IMPORTANT:
+        Model's batch size is updated at runtime. This could
+        potentially break the program.. Keep watching at this.
+
+        Setting batch size to 1 basically makes life easier to
+        build a forecasting model in production settings. If not,
+        we need to ensure prediction data is a factor of batch size..
+        that means, we need to sometimes predict more than neccessary
+        values...
+
+    Args:
+        rel_path  := Relative path to Keras model.
+        backend   := Keras backend
+    Return:
+        Keras model
+    """
+    model_path = os.path.join(app.config["KERAS_MODEL_DIR"], rel_path)
+    model = load_model(model_path)
+
+    # get model architecture, weights, 
+    model_arch = flask.json.loads(model.to_json())
+    model_weights = model.get_weights()
+
+    # set batch size to 1.
+    shape = model_arch["config"][0]["config"]["batch_input_shape"]
+    shape[0] = 1
+    model_arch["config"][0]["config"]["batch_input_shape"] = shape
+
+    # load model freshly. tweak the model to set batch size to 1.
+    # NOTE: In production, we want to sometimes forecast just 1 vector.. 
+    model = model_from_json(flask.json.dumps(model_arch))
+    model.set_weights(model_weights)
+
+    return model
 
 
 def query_logs(site, fields, start, end, freq="minutes", aggregate="avg", order=1):
@@ -254,6 +303,120 @@ def logs_api(site):
     return json.jsonify(response)
 
 
+@app.route("/api/v1/forecast/<site>", methods=["GET"])
+def forecast_api(site):
+    """Forecast Chiller plant sensor logs.
+
+    Model Configuration Notes:
+        Forecast API searches for a model configuration file (config.json)
+        in KERAS_MODEL_DIR path. The configuration file contains the following
+        information used while training the LSTM model
+            1. features array (in order)
+            2. target (currently supports univariate)
+            3. lookback
+            4. model file name (present in the same directory)
+
+    Other notes:
+        This is *not* production ready yet. It's so much good to presist this
+        data somewhere instead of predicting at each call..
+
+    Args:
+        site    := Chiller Plant ID (eg: insead)
+    Query Parameters
+        start   := %Y-%m-%d, forecast logs start date, default 2 days before
+        end     := %Y-%m-%d, forecast logs end data, default UTC today
+        freq    := years/months/days/hours/minutes, forecast sampling interval
+        field  := forecast this field data (required)
+    """
+    form = forms.ForecastV1QueryForm(request.args)
+    if not form.validate():
+        return flask.make_response(json.jsonify(**form.errors), 400)
+
+    # load model parameters
+    config_file = os.path.join(app.config["KERAS_MODEL_DIR"], "config.json")
+    model_config_list = flask.json.load(open(config_file, "rb"))
+
+    # search for required configuration..
+    model = None
+    model_config = None
+    for c in model_config_list:
+        if c["target"].lower() == form.field.data.lower():
+            model_file_pth = os.path.join(app.config["KERAS_MODEL_DIR"], c["model_name"])
+            model = load_keras_model(model_file_pth)
+            model_config = c
+    if model is None:
+        response = {"message": "Forecast model not found"}
+        return flask.make_response(response, 400)
+
+    lookback = model_config["lookback"]
+    features = model_config["features"] # order is imp!!
+    target = [model_config["target"]]
+
+    # query enough data...
+    # NOTE: Forecast models are trained with "minutes" frequency.. 
+    # Using other frequency is may lead to inaccurate results.
+    data_query = query_logs(
+        site=site,
+        fields=features+target,
+        start=form.start.data - dt.timedelta(**{form.freq.data: lookback}),
+        end=form.end.data,
+        freq=form.freq.data,
+        aggregate="avg")
+    data = []
+    for i in data_query:
+        i["timestamp"] = i.pop("_id")
+        i["timestamp"] = dt.datetime.strptime(i["timestamp"], "%Y-%m-%dT%H:%M:%S.%f")
+        data.append(i)
+    df = pd.DataFrame(data).set_index("timestamp")
+
+    # preprocess this data..
+    df = process.replace_nulls(df, cols=features+target)
+    df = process.replace_with_near(df, cols=features+target)
+    df = process.get_normalized_df(df, cols=features+target)
+
+    # prepare input vectors for forecast model
+    X, y = process.prepare_features(
+        dataframe=df,
+        features=features,
+        target=target, 
+        N=lookback)
+    X = process.Reshape.x(X)
+    y = process.Reshape.y(y)
+
+    # may the model forecast as good as a saint....
+    predict_y = model.predict(X, batch_size=1)
+    predict_y = process.Reshape.inv_y(predict_y)
+
+    # inverse normalize
+    target_idx = -1 # the index of target vector in `features+target`
+    predict_y -= df.scaler.min_[target_idx]
+    predict_y /= df.scaler.scale_[target_idx]
+
+    df[target] -= df.scaler.min_[target_idx]
+    df[target] /= df.scaler.scale_[target_idx]
+
+    # prepare response
+    results = []
+    for idx, t, y in zip(df.index, df[target].values, predict_y):
+        results.append({
+            "_id": idx.strftime("%Y-%m-%dT%H:%M:%S.%f"),
+            "value": float(t[0]),
+            "predicted": float(y),
+        })
+
+    params = form.data
+    params["start"] = form.start._data
+    params["end"] = form.end._data
+    
+    response = {
+        "results": results,
+        "queryParams": params,
+        "apiVersion": "v1"
+    }
+
+    return json.jsonify(response)
+
+
 @app.route("/api/info")
 def api_info_page():
     return flask.render_template("api_info.html")
@@ -261,7 +424,7 @@ def api_info_page():
 
 @app.route("/")
 def index_page():
-    return flask.render_template("dynamic.html")
+    return flask.redirect("/view/dynamic")
 
 
 @app.route("/view/<view_type>")
@@ -275,4 +438,6 @@ if __name__ == "__main__":
     client = pymongo.MongoClient(tz_aware=True)
     app.config["client"] = client
     app.config["db"] = client[cfg.DATABASE["db"]]
+    app.config["KERAS_MODEL_DIR"] = \
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "ml_models"))
     app.run(debug=True)

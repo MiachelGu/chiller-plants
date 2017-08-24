@@ -120,3 +120,15 @@ class AbnormalitiesV1QueryForm(wtforms.Form):
             field.data = "hours"
         if field.data not in ["years", "months", "days", "hours", "minutes"]:
             raise wtforms.ValidationError("{} is invalid".format(field.data))
+
+
+class ForecastV1QueryForm(AbnormalitiesV1QueryForm):
+    """Form for Forecast v1 API query parameters."""
+    
+    def validate_field(self, field):
+        if not field.data:
+            raise wtforms.ValidationError("field is empty")
+        supported = ["cwshdr"]
+        if field.data.lower() not in supported:
+            template = "{} is not supported. Currently supported: {}"
+            raise wtforms.ValidationError(template.format(field.data, supported))

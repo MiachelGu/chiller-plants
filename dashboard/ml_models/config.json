@@ -1,0 +1,8 @@
+[
+  {
+    "target": "cwshdr",
+    "features": ["loadsys", "drybulb", "rh", "cwrhdr", "cwsfhdr"],
+    "lookback": 15,
+    "model_name": "cwshdr2.h5"
+  }
+]

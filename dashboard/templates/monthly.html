@@ -23,6 +23,7 @@
 </div>
 
 <div class="row">
+  <div class="col-md-6"><div id="table-monthly"></div></div>
   <div class="col-md-6"><div id="plot-monthly-effsys"></div></div>
   <div class="col-md-6"><div id="plot-monthly-loadsys"></div></div>
   <div class="col-md-6"><div id="plot-monthly-hbsys"></div></div>
@@ -64,7 +65,7 @@
     // fields to query
     var fields = ["effsys", "loadsys", "hbsys", "chwshdr", "chwsfhdr", "cwshdr", "cwsfhdr"];
 
-    var queryParams = {
+    var q1 = {
       start: start.toISOString().substring(0, 10),
       end: end.toISOString().substring(0, 10),
       freq: "days",
@@ -72,26 +73,79 @@
       fields: fields.join(","),
     };
 
-    // load the time series plots.. 
-    $.get("/api/v1/logs/" + site, queryParams)
-      .done(function onApiSuccess(data) {
-        if (data.results && data.results.length > 0) {
-          for (f in fields) {
-            var field = fields[f];
-            var xlabel = "Time";
-            var ylabel = field.toUpperCase();
-            var plotElementId = "plot-monthly-" + field;
-            plotNewTimeSeries(xlabel, ylabel, data.results, field, plotElementId);
-          }
+    var q2 = {
+      start: start.toISOString().substring(0, 10),
+      end: end.toISOString().substring(0, 10),
+      freq: "months",
+      func: "avg",
+      fields: fields.join(","),
+    };
+
+    var q3 = {
+      start: start.toISOString().substring(0, 10),
+      end: end.toISOString().substring(0, 10),
+      freq: "months",
+      func: "max",
+      fields: fields.join(","),
+    };
+
+
+    var req1 = $.get("/api/v1/logs/" + site, q1);
+    var req2 = $.get("/api/v1/logs/" + site, q2);
+    var req3 = $.get("/api/v1/logs/" + site, q3);
+
+    $.when(req1, req2, req3)
+    .done(function(arr1, arr2, arr3) {
+      var timeseries = arr1[0].results;
+      var avgAggregates = arr2[0].results;
+      var sumAggregates = arr3[0].results;
+
+      // plot the table..
+      var tableContainer = $("#table-monthly");
+      var table = $("<table>").addClass("table table-striped");
+
+      if (avgAggregates && avgAggregates.length > 0) {
+        tableContainer.html("");
+        tableContainer
+          .append( $("<h2>").text("Summary") )
+          .append(table);
+
+        Object.keys(avgAggregates[0]).forEach(function(k) {
+          if (k.startsWith("_")) return; // ignore showing this field.
+          var tr = $("<tr>");
+
+          tr.append( $("<th>").text("Avg " + k.toUpperCase()) );
+          tr.append( $("<td>").text(avgAggregates[0][k]) );
+
+          tr.append( $("<th>").text("Max " + k.toUpperCase()) );
+          tr.append( $("<td>").text(sumAggregates[0][k]) );
+
+          table.append(tr);
+        });
+      }
+
+      // plot the charts..
+      if (timeseries && timeseries.length > 0) {
+        for (f in fields) {
+          var field = fields[f];
+          var xlabel = "Time";
+          var ylabel = field.toUpperCase();
+          var plotElementId = "plot-monthly-" + field;
+          plotNewTimeSeries(
+            field, //title
+            xlabel, ylabel, timeseries, field, plotElementId);
         }
-        submitBtn.html("Refresh");
-        submitBtn.prop("disabled", false);
-      })
-      .fail(function onApiFailure(err) {
-        console.log(err);
-        submitBtn.html("Refresh");
-        submitBtn.prop("disabled", false);
-      })
+      }
+
+      submitBtn.html("Refresh");
+      submitBtn.prop("disabled", false);
+
+    })
+    .fail(function(err) {
+      console.log(err);
+      submitBtn.html("Refresh");
+      submitBtn.prop("disabled", false);
+    })
 
   })
 
