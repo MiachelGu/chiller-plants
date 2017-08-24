@@ -3,6 +3,7 @@ import datetime as dt
 import config as cfg
 import numpy as np
 import pandas as pd
+import flask_login as login
 import flask
 import pymongo
 import pytz
@@ -20,6 +21,19 @@ from keras.models import load_model, model_from_json
 
 
 app = flask.Flask(__name__)
+login_manager = login.LoginManager()
+
+
+class User(login.UserMixin):
+    """Vanilla user object."""
+
+    def __init__(self, id):
+        self.id = id
+        self.name = "User {}".format(id)
+        self.password = "1234"
+
+    def __repr__(self):
+        return self.name
 
 
 @lru_cache(maxsize=None)
@@ -173,6 +187,7 @@ def find_frequency_based_abnormalities(train, test, limit=(0.1, 0.9), delta=10, 
 
 
 @app.route("/api/v1/abnormalities/<site>", methods=["GET"])
+@login.login_required
 def frequency_based_abnormalities_api(site):
     """Find abnormalities in Chiller plant sensor logs.
 
@@ -249,6 +264,7 @@ def frequency_based_abnormalities_api(site):
 
 
 @app.route("/api/v1/logs/<site>", methods=["GET"])
+@login.login_required
 def logs_api(site):
     """Query for chiller plant sensor logs.
 
@@ -304,6 +320,7 @@ def logs_api(site):
 
 
 @app.route("/api/v1/forecast/<site>", methods=["GET"])
+@login.login_required
 def forecast_api(site):
     """Forecast Chiller plant sensor logs.
 
@@ -419,16 +436,37 @@ def forecast_api(site):
 
 
 @app.route("/api/info")
+@login.login_required
 def api_info_page():
     return flask.render_template("api_info.html")
 
 
 @app.route("/")
+@login.login_required
 def index_page():
     return flask.redirect("/view/dynamic")
 
 
+@app.route("/login", methods=["GET", "POST"])
+def login_page():
+    if request.method == "GET":
+        return flask.render_template("login.html")
+    password = request.form.get("password")
+    user_obj = User(0)
+    if password == user_obj.password:
+        login.login_user(user_obj)
+        return flask.redirect(flask.url_for("index_page"))
+    else:
+        return flask.redirect(flask.url_for("login_page"))
+
+
+@login_manager.user_loader
+def load_user(uid):
+    return User(uid)
+
+
 @app.route("/view/<view_type>")
+@login.login_required
 def dashboard_page(view_type):
     if view_type not in ["monthly", "daily", "dynamic"]:
         raise flask.abort(404)
@@ -436,9 +474,18 @@ def dashboard_page(view_type):
 
 
 if __name__ == "__main__":
+    # create mongodb client
     client = pymongo.MongoClient(tz_aware=True)
+
+    # setup configurations..
+    app.config["SECRET_KEY"] = "youknowwho"
     app.config["client"] = client
     app.config["db"] = client[cfg.DATABASE["db"]]
     app.config["KERAS_MODEL_DIR"] = \
         os.path.abspath(os.path.join(os.path.dirname(__file__), "ml_models"))
+
+    # setup login manager
+    login_manager.init_app(app)
+    login_manager.login_view = "login_page"
+
     app.run(debug=True)
