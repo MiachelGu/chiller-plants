@@ -26,9 +26,7 @@
 
 ## Dashboard
 
-Notes:
-
-* I think ML model isn't releasing memory after usage.. Check this out!!
+Check /dashboard/readme.txt for more information
 
 ![Dashboard Screenshot](/output/dashboard1.png?raw=true "Dynamic View")
 ![Dashboard Screenshot](/output/dashboard2.png?raw=true "Monthly View")
